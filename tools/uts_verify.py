@@ -141,6 +141,13 @@ def verify_artifact(step_id: str, rel: str, results: list[Result]) -> bool:
     return ok
 
 
+def run_deterministic_phase(plan: dict[str, Any], report_dir: Path, results: list[Result], prefix: str) -> None:
+    for item in plan.get("deterministic", []):
+        result = run_command(prefix + item["id"], item["command"], report_dir)
+        results.append(result)
+        print(f"[{result.status}] {result.id}")
+
+
 def write_summary(plan: dict[str, Any], report_dir: Path, results: list[Result], allow_network: bool) -> int:
     failures = [r for r in results if r.status in {"FAIL", "BLOCKED"}]
     lines = [
@@ -194,10 +201,7 @@ def main() -> int:
     print(f"UTS plan {plan.get('stage')} -> {report_dir}")
 
     # Deterministic gates are independent and all run even if one fails.
-    for item in plan.get("deterministic", []):
-        result = run_command("deterministic." + item["id"], item["command"], report_dir)
-        results.append(result)
-        print(f"[{result.status}] {result.id}")
+    run_deterministic_phase(plan, report_dir, results, "deterministic.")
 
     host = plan["host"]
     for step_id, key in (("host.build-doctor", "buildDoctor"), ("host.runtime-doctor", "runtimeDoctor")):
@@ -260,6 +264,11 @@ def main() -> int:
         results.append(runtime)
     else:
         results.append(synthetic("runtime.launch-probe", "BLOCKED", "native binary was not built successfully"))
+
+    # Re-run repository contracts after UTS has produced ignored build/runtime artifacts.
+    # This makes one invocation prove repeatability instead of discovering state pollution
+    # only on the next verifier run. No caches are deleted.
+    run_deterministic_phase(plan, report_dir, results, "postbuild.deterministic.")
 
     return write_summary(plan, report_dir, results, args.allow_network)
 

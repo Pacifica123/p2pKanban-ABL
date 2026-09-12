@@ -1,8 +1,8 @@
 # Exact next implementation sequence
 
-A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary and host probes. A02 established the typed presentation transport seam. The first real UTS native build then found a concrete source/package defect: Tauri context expected `src-tauri/icons/icon.png`. **A02b** fixes that defect, removes the unsupported Node `<23` build-time cap, and makes `tools/uts_verify.py` + `tools/uts_plan.json` the canonical evolving UserTestSpace verification pipeline.
+A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary and host probes. A02 established the typed presentation transport seam. A02b fixed the first real UTS native-build defect and introduced the canonical verifier. The post-A02b UTS run then passed frontend/Cargo/native runtime probing and exposed deterministic-check repeatability defects on the immediate second run. **A02c** corrects those gates to validate Git-tracked repository content and reruns them after build/runtime work in the same verifier invocation.
 
-The UTS verifier must be run after applying A02b. A new compiler/runtime failure is evidence and re-opens the affected stage; it is not a reason to hide or weaken the gate. Host-dependent evidence may remain verification-pending without blocking unrelated source-stage work under DELIVERY-A01-003.
+A new compiler/runtime or post-build deterministic failure in UserTestSpace is evidence and re-opens the affected stage; it is not a reason to hide or weaken the gate. Host-dependent evidence may remain verification-pending without blocking unrelated source-stage work under DELIVERY-A01-003.
 
 The exact next architecture patch is **A03 — Rust application/domain boundary**.
 

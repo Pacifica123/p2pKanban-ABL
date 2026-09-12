@@ -14,6 +14,8 @@ import re
 import sys
 from pathlib import Path
 
+from repository_contract import generated_tracked_paths, tracked_relative_paths
+
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_FILES = [
@@ -202,17 +204,24 @@ def check_fixtures() -> None:
 
 
 def check_repo_hygiene() -> None:
+    tracked = tracked_relative_paths(ROOT)
+    tracked_set = set(tracked)
     for name in FORBIDDEN_REPO_PATHS:
-        if (ROOT / name).exists():
-            fail(f"forbidden A00 runtime/generated path present: {name}")
-    for path in ROOT.rglob("*"):
-        rel = path.relative_to(ROOT).as_posix()
-        if any(part in {"__pycache__", ".pytest_cache"} for part in path.parts):
-            fail(f"generated cache present: {rel}")
+        prefix = name.rstrip("/") + "/"
+        if name in tracked_set or any(rel.startswith(prefix) for rel in tracked):
+            fail(f"forbidden A00 runtime/generated path is tracked: {name}")
+    generated = generated_tracked_paths(ROOT)
+    if generated:
+        fail("generated paths must not be tracked: " + ", ".join(generated[:10]))
+    for rel in tracked:
+        path = ROOT / rel
+        parts = Path(rel).parts
+        if any(part in {"__pycache__", ".pytest_cache"} for part in parts):
+            fail(f"generated cache is tracked: {rel}")
         if path.is_file() and path.suffix.lower() in {".pyc", ".pyo", ".sqlite", ".sqlite3", ".db"}:
-            fail(f"generated/runtime artifact present: {rel}")
+            fail(f"generated/runtime artifact is tracked: {rel}")
         if path.is_symlink():
-            fail(f"symlinks are not part of the A00 patch: {rel}")
+            fail(f"symlinks are not part of the repository contract: {rel}")
 
 
 def check_internal_manifest_hash_format() -> None:

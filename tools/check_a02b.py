@@ -45,8 +45,8 @@ if lock.get("packages", {}).get("", {}).get("engines", {}).get("node") != ">=20"
     fail("package-lock root Node engine drift")
 
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A02b":
-    fail("UTS plan schema/stage mismatch")
+if plan.get("schemaVersion") != 1:
+    fail("UTS plan schema mismatch")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 for expected in ("a00", "a01", "a01b", "a01c", "a02", "a02b"):
     if expected not in ids:
@@ -80,7 +80,7 @@ if "superseded" not in legacy.lower() or "UTS_VERIFICATION.md" not in legacy:
     fail("legacy UTS doc must not remain a competing SSOT")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "A02b" not in status or "icon.png" not in status or "UTS verifier" not in status:
+if "A02b" not in status or "icon.png" not in status or "tools/uts_verify.py" not in status:
     fail("implementation ledger missing A02b correction")
 
 print("A02b icon/build correction + unified UTS verifier contract: OK")

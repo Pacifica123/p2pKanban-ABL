@@ -8,6 +8,8 @@ import re
 import tomllib
 from pathlib import Path
 
+from repository_contract import generated_tracked_paths, tracked_files, tracked_relative_paths
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -179,30 +181,26 @@ if re.search(r'''(?:src|href)=["']https?://''', frontend_text, re.I):
     fail("frontend references a remote runtime asset")
 
 # A01a must not accidentally add the runtime technologies the native trajectory removes.
-runtime_paths = [ROOT / "src", ROOT / "src-tauri"]
+# Read only Git-tracked source files: UTS deliberately leaves ignored target/dist caches.
+text_suffixes = {".rs", ".toml", ".json", ".ts", ".tsx", ".css", ".html", ".mjs"}
 runtime_text = "\n".join(
     path.read_text(encoding="utf-8", errors="replace")
-    for base in runtime_paths
-    for path in base.rglob("*")
-    if path.is_file()
+    for path in tracked_files(ROOT, "src", "src-tauri")
+    if path.suffix.lower() in text_suffixes
 )
 for forbidden in ("docker-compose", "postgresql://", "postgres://", "systemctl --user", "sudo pacman"):
     if forbidden.lower() in runtime_text.lower():
         fail(f"runtime source contains forbidden dependency/assumption: {forbidden}")
 
-# Hygiene: no generated/runtime payload may already exist in the repository.
-for rel in (
-    "node_modules",
-    "dist",
-    "target",
-    "src-tauri/target",
-    "src-tauri/gen",
-):
-    if (ROOT / rel).exists():
-        fail(f"generated directory must not be committed/present during deterministic check: {rel}")
-for pattern in ("*.sqlite", "*.sqlite3", "*.db", "*.db-wal", "*.db-shm", "*.pem", "*.p12", "*.pfx"):
-    if any(ROOT.rglob(pattern)):
-        fail(f"runtime/secret artifact present: {pattern}")
+# Hygiene means "not repository-owned", not "must not exist after a build".
+# Ignored UTS caches are allowed to remain so repeated verification stays incremental.
+generated = generated_tracked_paths(ROOT)
+if generated:
+    fail("generated directories/files must not be tracked: " + ", ".join(generated[:10]))
+secret_suffixes = (".sqlite", ".sqlite3", ".db", ".db-wal", ".db-shm", ".pem", ".p12", ".pfx")
+for rel in tracked_relative_paths(ROOT):
+    if rel.lower().endswith(secret_suffixes):
+        fail(f"runtime/secret artifact must not be tracked: {rel}")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
 if "| A01 Tauri 2 shell + packaged React/Vite asset |" not in status:

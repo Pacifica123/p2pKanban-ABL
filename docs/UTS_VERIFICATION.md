@@ -10,7 +10,7 @@ From the project root inside UserTestSpace:
 python3 -B tools/uts_verify.py
 ```
 
-The verifier is **network-free by default**. It runs every deterministic Axx gate, host doctors, cached frontend preparation/build, Cargo lock/fetch/test/build, and (when the native binary builds) the Linux runtime probe. It continues through independent checks and writes all results under:
+The verifier is **network-free by default**. It runs every deterministic Axx gate, host doctors, cached frontend preparation/build, Cargo lock/fetch/test/build, and (when the native binary builds) the Linux runtime probe. It then reruns the deterministic gates **after** those generated artifacts exist, proving repeatability without deleting useful caches. It continues through independent checks and writes all results under:
 
 ```text
 .uts-reports/<UTC timestamp>/
@@ -37,7 +37,7 @@ python3 -B tools/uts_verify.py --no-runtime
 
 That is not runtime evidence; the summary records the runtime probe as skipped.
 
-## Current A02b manual evidence
+## Current A02c manual evidence
 
 After a successful automatic run, keep the native window open long enough to confirm:
 
@@ -52,4 +52,4 @@ This visual check is currently the remaining WebView→Rust IPC observation. It 
 
 `tools/uts_plan.json` is the machine-readable verification plan. Each Axx patch updates that plan when it adds/removes host checks. `tools/uts_verify.py` is the stable entry point, so the user does not need to maintain a growing command list manually.
 
-A failing UTS check re-opens the stage whose property failed. Send `.uts-reports/latest-summary.txt` plus the referenced failing `logs/*.log`; raw caches, `node_modules`, `target`, `dist`, secrets and the entire report directory are not patch inputs.
+A failing UTS check re-opens the stage whose property failed. `postbuild.deterministic.*` failures specifically mean a source contract is not repeatable in a built workspace. Send `.uts-reports/latest-summary.txt` plus the referenced failing `logs/*.log`; raw caches, `node_modules`, `target`, `dist`, secrets and the entire report directory are not patch inputs. A resolver-generated `src-tauri/Cargo.lock` is source provenance rather than a cache; if a later patch is to commit it, provide that exact file explicitly rather than reconstructing it from logs.

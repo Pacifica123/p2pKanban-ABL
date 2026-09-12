@@ -77,3 +77,21 @@ The earlier `>=20 <23` range was a conservative assumption without an implementa
 `tools/uts_verify.py` is now the stable UTS entry point and `tools/uts_plan.json` is the evolving machine-readable plan. Patches update the plan as host checks change. The verifier is offline by default, may populate caches only with explicit `--allow-network`, continues through independent checks, and stores text/JSON/log evidence under ignored `.uts-reports/`.
 
 This does not weaken `devctl`: generic patch checks remain deterministic/network-free, while host/toolchain/runtime evidence remains explicit and separately attributable.
+
+## CORR-A02-007 — deterministic hygiene confused repository content with ignored UTS build state
+
+**Classification:** [FACT] from two consecutive real UTS verifier runs after A02b.  
+**Architecture impact:** verification correctness only; no runtime ADR changes.  
+**Status:** fixed in A02c.
+
+The first post-A02b UTS run passed completely and intentionally left ignored `dist/`, `node_modules/`, `src-tauri/target/` and a resolver-generated Cargo lock in the working tree. The immediate second invocation then failed A00 because `dist/` merely existed, caused A01 to recursively scan generated Cargo output until the process was killed, and caused A01b to reject the current Cargo lock because it hard-coded serialization format `version = 3`.
+
+Deterministic source gates must answer “is forbidden/generated state owned by the repository?” rather than “has this developer ever built the project?”. A02c therefore derives hygiene from `git ls-files`, scans only tracked source for forbidden runtime assumptions, and accepts resolver-generated Cargo lock formats 3/4. Ignored caches remain available for incremental offline UTS work.
+
+## DELIVERY-A02-008 — one UTS invocation must prove post-build repeatability
+
+**Classification:** [PROPOSAL implemented as verification tooling].  
+**Architecture impact:** verification workflow only.  
+**Status:** implemented in A02c.
+
+The canonical verifier now reruns the entire deterministic gate list after frontend/Cargo/runtime steps. This makes state-pollution bugs observable during the same invocation that created the state. The verifier does not use `git clean`, resets, or cache deletion to manufacture a pass.
