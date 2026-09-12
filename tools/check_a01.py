@@ -60,14 +60,18 @@ expected_dev = {
     "typescript": "5.9.3",
     "vite": "5.4.21",
 }
-if pkg.get("dependencies") != expected_deps:
-    fail("package.json runtime dependencies differ from the reviewed A01a set")
+deps = pkg.get("dependencies", {})
+for name, version in expected_deps.items():
+    if deps.get(name) != version:
+        fail(f"A01 base dependency drift: {name}@{version}")
+allowed_later = {"@tauri-apps/api"}
+if set(deps) - set(expected_deps) - allowed_later:
+    fail("unexpected runtime dependency outside reviewed staged set")
 if pkg.get("devDependencies") != expected_dev:
     fail("package.json devDependencies differ from the reviewed A01a set")
 if pkg.get("scripts", {}).get("build") != "tsc --noEmit && vite build":
     fail("frontend build must typecheck before Vite build")
-if any(name.startswith("@tauri-apps/") for name in {**expected_deps, **expected_dev}):
-    fail("A01a must not expose a frontend Tauri API package before A02")
+# A02 may add the official Tauri core JS transport package; A01 still forbids privilege plugins.
 
 # package-lock must exactly describe the root pins and carry immutable registry integrity metadata.
 lock = load_json("package-lock.json")
@@ -76,8 +80,12 @@ if lock.get("lockfileVersion") != 3:
 root_lock = lock.get("packages", {}).get("")
 if not isinstance(root_lock, dict):
     fail("package-lock.json missing root package entry")
-if root_lock.get("dependencies") != expected_deps or root_lock.get("devDependencies") != expected_dev:
-    fail("package-lock root dependency set does not match package.json")
+root_deps = root_lock.get("dependencies", {})
+for name, version in expected_deps.items():
+    if root_deps.get(name) != version:
+        fail(f"package-lock lost A01 base dependency: {name}@{version}")
+if root_lock.get("devDependencies") != expected_dev:
+    fail("package-lock A01 devDependency set drifted")
 for name, version in {**expected_deps, **expected_dev}.items():
     entry = lock["packages"].get(f"node_modules/{name}")
     if not isinstance(entry, dict) or entry.get("version") != version:

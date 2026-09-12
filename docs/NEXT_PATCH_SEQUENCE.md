@@ -1,20 +1,23 @@
 # Exact next implementation sequence
 
-A01a established the permanent Tauri/React shell source/security boundary. A01b added the fail-closed offline build harness. A01c corrects the selected Tauri 2.11.5 Rust floor to 1.90 and adds a non-root Linux runtime evidence collector for XDG isolation, process-tree/runtime-dependency leakage, TCP listeners and log secret canaries.
+A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary, offline build harness and Linux runtime probe. Per DELIVERY-A01-003, unavailable Cargo/Arch GUI evidence is now delegated to UserTestSpace and remains explicitly verification-pending rather than blocking source-stage progression.
 
-A01 remains **partially implemented** because this patch-construction environment cannot resolver-generate the project lock or execute an Arch graphical WebView build honestly.
+A02 now establishes the explicit presentation transport seam:
 
-The exact next patch is **A01d — materialized Cargo lock + Arch build/WebView runtime evidence**.
+- `apiRequest` remains the presentation-facing facade where practical;
+- web mode owns HTTP/fetch behavior;
+- desktop mode maps only explicit route/method pairs to named Tauri commands;
+- the first route is `GET /health` → `desktop_api_health`;
+- no localhost fallback, arbitrary command dispatcher, filesystem/process/network plugin or new capability permission exists.
 
-A01d exit target:
+The exact next patch is **A03 — Rust application/domain boundary**.
 
-- resolver-generate/review `src-tauri/Cargo.lock` on the exact repository manifest;
-- record the exact Rust toolchain that actually passes the Arch-family build, then pin it without introducing an implicit network requirement;
-- prepare approved npm/Cargo caches outside generic `devctl start`, disconnect external network, then pass `python3 -B tools/a01b_host_acceptance.py offline-build`;
-- launch the built binary as a non-root user in a real Wayland or X11 session and pass `python3 -B tools/a01c_host_runtime_probe.py launch-probe`;
-- prove real WebView denial of hostile HTTP/HTTPS/file/data/javascript navigation, new windows and downloads;
-- retain host/package/WebKitGTK/GTK/GLib/session evidence without claiming the untested display backend or Arch ARM.
+A03 exit target:
 
-Only after A01d is green may A01 be marked **implemented** and the architecture advance to **A02 — explicit web↔desktop frontend transport adapter**.
+- introduce an application service module independent of Tauri/Axum/SQL;
+- move `desktop_api_health` behind that application boundary as the first end-to-end example;
+- define command DTO/error mapping conventions without importing PostgreSQL/SQLite concerns;
+- add deterministic tests proving application APIs contain no `sqlx::Pg*`, HTTP, Tauri or filesystem/network dependencies;
+- keep A01/A02 UTS commands in `docs/UTS_A01_A02_VERIFICATION.md`; a UTS failure re-opens the affected stage.
 
-Then, in order: **A02 transport adapter → A03 application/domain boundary → A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.
+Then, in order: **A03 application/domain boundary → A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.

@@ -6,9 +6,9 @@ This ledger is normative for claims about the Arch-native repository. `implement
 |---|---|---|---|
 | DEBT-A00-001 devctl commitless-repo rollback limitation | `docs/architecture/08-implementation-corrections-and-debt.md`; seeded-repo rollback validation | **planned tooling fix / operationally mitigated** | devctl future |
 | A00 evidence baseline + protocol fixtures | `docs/architecture/**`, `docs/evidence/A00_EVIDENCE_BASELINE.md`, `evidence/**`, `fixtures/**`, `tools/check_a00.py` | **implemented** | A01 |
-| ADR-001 Tauri 2 single user-session process model, no default listener/service | `src-tauri/**`, `docs/evidence/A01*.md`, `tools/check_a01*.py`, `tools/a01b_host_acceptance.py`, `tools/a01c_host_runtime_probe.py` | **partially implemented (A01a+A01b+A01c contracts; materialized build/WebView evidence pending)** | A01d |
-| A01 Tauri 2 shell + packaged React/Vite asset | `package*.json`, `src/**`, `src-tauri/**`, `tools/check_a01*.py`, `tools/a01b_host_acceptance.py`, `tools/a01c_host_runtime_probe.py`, `docs/evidence/A01*.md` | **partially implemented (A01a+A01b+A01c); no compiled/WebView-runtime claim yet** | A01d |
-| A02 explicit web↔desktop frontend transport adapter | none yet | **planned; blocked until A01d exit evidence** | A02 |
+| ADR-001 Tauri 2 single user-session process model, no default listener/service | `src-tauri/**`, `docs/evidence/A01*.md`, `tools/check_a01*.py`, `tools/a01b_host_acceptance.py`, `tools/a01c_host_runtime_probe.py` | **partially implemented; source/security contracts present, Arch build/runtime verification delegated to UTS** | UTS evidence |
+| A01 Tauri 2 shell + packaged React/Vite asset | `package*.json`, `src/**`, `src-tauri/**`, `tools/check_a01*.py`, `tools/a01b_host_acceptance.py`, `tools/a01c_host_runtime_probe.py`, `docs/evidence/A01*.md`, `docs/UTS_A01_A02_VERIFICATION.md` | **partially implemented (A01a+A01b+A01c); source/contracts accepted for progression, host build/WebView verification pending in UTS** | UTS evidence |
+| A02 explicit web↔desktop frontend transport adapter | `src/shared/api/**`, `src/shared/transport/**`, `src/features/system/api/version.ts`, `src-tauri/src/desktop_api.rs`, `tools/check_a02.py`, `docs/evidence/A02_TRANSPORT_BOUNDARY.md` | **partially implemented; deterministic source/contracts green, runtime IPC verification pending in UTS** | A03 |
 | A03 Rust application/domain boundary free of `sqlx::Pg*` APIs | none yet | **planned** | A03 |
 | A04 repository semantic contract suite | frozen source/fixture evidence only | **planned** | A04 |
 | ADR-002 SQLite embedded profile store | architecture only; no DB file/schema exists | **planned** | A05 |
@@ -32,6 +32,6 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | A18 performance/power/rolling-release hardening | no measurements yet | **experiment-needed** | A18 |
 | A19 Iroh / Arch ARM evidence track | no promotion evidence | **experiment-needed** | A19 |
 
-## Explicit non-claims after A01c
+## Explicit non-claims after A02
 
-The permanent shell source/security boundary, strict offline-build harness and Linux runtime evidence collector now exist. A01 still has **no compiled/launchable-runtime claim** in this repository snapshot: `src-tauri/Cargo.lock` has not been resolver-generated on the exact manifest and no Arch graphical WebView run has been captured. The prior `rust-version = 1.77.2` statement is superseded by DEBT-A01-002; the selected Tauri 2.11.5 floor is now declared as Rust 1.90. There is still no application/domain transport, SQLite profile, production XDG persistence, secret vault, Linux package, sync transport or durable offline user workflow.
+A01 still has **no compiled/launchable-runtime claim** in this repository snapshot: `src-tauri/Cargo.lock` has not been resolver-generated on the exact manifest and no Arch graphical WebView run has been captured. DELIVERY-A01-003 delegates those unavailable checks to UTS without treating them as passed. A02 now has an explicit web↔desktop transport seam and one allowlisted health command, but its real WebView→Rust IPC smoke is likewise UTS-verification-pending. There is still no A03 application/domain service layer, SQLite profile, production XDG persistence, secret vault, Linux package, sync transport or durable offline user workflow.

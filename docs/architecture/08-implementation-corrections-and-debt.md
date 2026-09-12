@@ -43,3 +43,11 @@ A01b therefore adds a fail-closed offline host harness. Dependency/cache populat
 A01a recorded `rust-version = 1.77.2` and described that value as the selected Tauri release's Rust floor. Current upstream Tauri 2.11.5 workspace metadata declares **Rust 1.90** via `rust-version = 1.90`, and the `tauri` 2.11.5 crate inherits that workspace value. A01c therefore changes the native package declaration to `1.90` and supersedes the A01a compatibility claim.
 
 This correction does **not** claim that 1.90 is the final reproducible build toolchain. The exact toolchain pin must be chosen from a successful A01d Arch-host build and cached/prepared explicitly so offline builds do not unexpectedly invoke rustup/network access.
+
+## DELIVERY-A01-003 — host-dependent verification delegated to UserTestSpace
+
+**Status:** accepted delivery-process correction; does not convert missing evidence into a pass.
+
+The patch-construction environment may lack Cargo/Rust, Arch WebKitGTK development packages, a graphical Wayland/X11 session, or a populated offline npm/Cargo cache. Starting with A02, those unavailable host-dependent checks are explicitly delegated to UserTestSpace (UTS) when the deterministic source/contracts for the patch are green.
+
+This changes the **blocking policy**, not the evidence claim: A01/A02 host results remain `verification-pending` until the documented UTS commands pass. Dependent source stages may proceed when they do not rely on the unverified runtime property. Any UTS failure re-opens the affected Axx stage and must be corrected before release/packaging claims. Generic devctl checks remain offline/network-independent and never turn a missing toolchain into a fake success.

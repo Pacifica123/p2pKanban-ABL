@@ -46,11 +46,11 @@ for token in ("FACT", "INFERENCE", "PROPOSAL", "UNRESOLVED EXPERIMENT", "A01d", 
     if token not in evidence:
         fail("A01c evidence missing classification/next-stage marker: " + token)
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "A01a+A01b+A01c" not in status or "A01d" not in status or "partially implemented" not in status:
-    fail("implementation ledger must remain honest and point to A01d")
+if "A01a+A01b+A01c" not in status or "partially implemented" not in status:
+    fail("implementation ledger must retain honest A01c partial status")
 next_doc = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A01d — materialized Cargo lock + Arch build/WebView runtime evidence" not in next_doc:
-    fail("next patch SSOT must be A01d")
+if "A03 — Rust application/domain boundary" not in next_doc or "UserTestSpace" not in next_doc:
+    fail("post-A02 SSOT must delegate host verification and advance to A03")
 
 # A01c must not fabricate generated evidence it could not execute.
 if (ROOT / "src-tauri/Cargo.lock").exists():

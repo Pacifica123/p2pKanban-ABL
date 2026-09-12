@@ -1,3 +1,4 @@
+mod desktop_api;
 mod navigation_policy;
 
 use tauri::{
@@ -7,6 +8,7 @@ use tauri::{
 
 fn main() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![desktop_api::desktop_api_health])
         .setup(|app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("p2pKanban")
