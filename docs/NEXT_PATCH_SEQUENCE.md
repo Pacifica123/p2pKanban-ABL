@@ -6,6 +6,8 @@ A00 froze source/protocol evidence. A01 established the Tauri/React process/secu
 
 Run `python3 -B tools/uts_verify.py`. If the new `rusqlite` sources are not yet present in the global Cargo cache, run the same command once with `--allow-network`, then return to the default offline command. Cargo test/build is the authority for A05 host verification.
 
+The first A05 UTS compile exposed an API-shape defect: `rusqlite 0.40.2` no longer exports the `DatabaseName` type used by the initial adapter. **A05b** corrects backup/restore to the generic database-name API (`"main"`) without changing schema or recovery semantics. Repeat `python3 -B tools/uts_verify.py`; Cargo test/build is the authority for the correction.
+
 The exact next architecture patch is **A06 — XDG adapters + multi-instance/locking behavior**.
 
 A06 exit target:

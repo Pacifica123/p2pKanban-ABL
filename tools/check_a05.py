@@ -59,7 +59,8 @@ for token in (
     "PRAGMA journal_mode=WAL",
     "PRAGMA integrity_check",
     "pragma_foreign_key_check",
-    "DatabaseName::Main",
+    'conn.backup("main", &backup, None)?;',
+    'conn.restore("main", &backup, None::<fn(rusqlite::backup::Progress)>)?;',
     "MIGRATION_V0_TO_V1_ID",
     "MIGRATION_V0_TO_V1_SHA256",
     "schema_migrations",
@@ -123,8 +124,8 @@ if "premature persistence dependency" in a04:
     fail("A04 checker still freezes Cargo before A05 adapters")
 
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A05":
-    fail("UTS plan did not advance to A05")
+if plan.get("schemaVersion") != 1:
+    fail("unsupported UTS plan schema")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 for required_id in ("a04", "a04b", "a05"):
     if required_id not in ids:

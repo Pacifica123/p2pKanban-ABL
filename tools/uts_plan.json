@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A05",
-  "description": "Canonical UserTestSpace verification plan through A05. Cargo test now compiles the bundled SQLite adapter, executes the shared A04 repository contract against it, verifies reopen durability, schema negotiation, integrity checks, and forced migration restore behavior.",
+  "stage": "A05b",
+  "description": "Canonical UserTestSpace verification plan through A05b. A05b corrects the rusqlite 0.40.2 backup/restore database-name API discovered by the first A05 Cargo compile; Cargo test/build remains the authoritative host verification for the SQLite adapter and migration restore path.",
   "deterministic": [
     {
       "id": "a00",
@@ -97,6 +97,14 @@
         "python3",
         "-B",
         "tools/check_a05.py"
+      ]
+    },
+    {
+      "id": "a05b",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a05b.py"
       ]
     }
   ],
@@ -203,7 +211,7 @@
   },
   "manualEvidence": [
     "In the native window confirm: mode: desktop",
-    "In the native window confirm: p2pkanban-arch-native 0.1.0 \u00b7 ok \u00b7 desktop",
+    "In the native window confirm: p2pkanban-arch-native 0.1.0 · ok · desktop",
     "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified"
   ]
 }

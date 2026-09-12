@@ -4,7 +4,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use rusqlite::{Connection, DatabaseName, TransactionBehavior};
+use rusqlite::{Connection, TransactionBehavior};
 
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
 pub const MIN_READER_SCHEMA_VERSION: u32 = 1;
@@ -173,7 +173,7 @@ fn migrate_if_needed(
     let should_backup = existed_before_open;
     if should_backup {
         let _ = fs::remove_file(&backup);
-        conn.backup(DatabaseName::Main, &backup, None)?;
+        conn.backup("main", &backup, None)?;
         backup_is_valid(&backup)?;
     }
     write_journal(&journal, from, CURRENT_SCHEMA_VERSION, "prepared")?;
@@ -181,7 +181,7 @@ fn migrate_if_needed(
     let migration_result = apply_v0_to_v1(conn, force_failure).and_then(|_| check_integrity(conn));
     if let Err(err) = migration_result {
         if should_backup {
-            conn.restore(DatabaseName::Main, &backup, None::<fn(rusqlite::backup::Progress)>)?;
+            conn.restore("main", &backup, None::<fn(rusqlite::backup::Progress)>)?;
             backup_is_valid(&backup)?;
         }
         write_journal(&journal, from, CURRENT_SCHEMA_VERSION, "restored-after-failure")?;
