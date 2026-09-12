@@ -50,8 +50,8 @@ for rel in (
             fail(f"A04b smuggled persistence token {token} into {rel}")
 
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A04b":
-    fail("UTS plan did not advance to A04b")
+if plan.get("schemaVersion") != 1:
+    fail("UTS plan schema mismatch")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 for required in ("a04", "a04b"):
     if required not in ids:

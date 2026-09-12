@@ -1,6 +1,7 @@
 mod application;
 mod desktop_api;
 mod domain;
+mod infrastructure;
 mod navigation_policy;
 
 use tauri::{

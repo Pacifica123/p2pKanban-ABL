@@ -46,6 +46,7 @@ pub enum RepositoryError {
     DuplicateCard,
     DuplicateReorderItem,
     Tombstoned,
+    StorageFailure,
 }
 
 pub trait PlannerRepository {

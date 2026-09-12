@@ -385,14 +385,7 @@ pub(crate) fn assert_repository_contract<R: PlannerRepository>(mut repo: R) {
     );
 }
 
-#[test]
-fn in_memory_reference_adapter_passes_repository_semantics() {
-    assert_repository_contract(InMemoryPlannerRepository::fixture());
-}
-
-#[test]
-fn stale_capability_epoch_rejects_the_entire_transaction() {
-    let mut repo = InMemoryPlannerRepository::fixture();
+pub(crate) fn assert_stale_epoch_contract<R: PlannerRepository>(mut repo: R) {
     let card = active_card("card-stale-epoch", column_a_id(), 100.0);
     let result = repo.commit(PlannerTransaction {
         workspace_id: workspace_id(),
@@ -409,9 +402,7 @@ fn stale_capability_epoch_rejects_the_entire_transaction() {
     assert!(repo.get_card(&card.id).unwrap().is_none());
 }
 
-#[test]
-fn failing_batch_rolls_back_earlier_mutations() {
-    let mut repo = InMemoryPlannerRepository::fixture();
+pub(crate) fn assert_atomic_rollback_contract<R: PlannerRepository>(mut repo: R) {
     let card = active_card("card-atomic", column_a_id(), 100.0);
     create(&mut repo, card.clone());
 
@@ -434,9 +425,7 @@ fn failing_batch_rolls_back_earlier_mutations() {
     assert_eq!(after.position, order(100.0));
 }
 
-#[test]
-fn reorder_is_atomic_column_scoped_and_deterministic() {
-    let mut repo = InMemoryPlannerRepository::fixture();
+pub(crate) fn assert_reorder_contract<R: PlannerRepository>(mut repo: R) {
     let card_a = active_card("card-a", column_a_id(), 100.0);
     let card_b = active_card("card-b", column_a_id(), 200.0);
     let card_other = active_card("card-other", column_b_id(), 300.0);
@@ -468,4 +457,24 @@ fn reorder_is_atomic_column_scoped_and_deterministic() {
     }]));
     assert_eq!(invalid, Err(RepositoryError::ScopeMismatch));
     assert_eq!(repo.get_card(&card_a.id).unwrap().unwrap().position, before_a);
+}
+
+#[test]
+fn in_memory_reference_adapter_passes_repository_semantics() {
+    assert_repository_contract(InMemoryPlannerRepository::fixture());
+}
+
+#[test]
+fn stale_capability_epoch_rejects_the_entire_transaction() {
+    assert_stale_epoch_contract(InMemoryPlannerRepository::fixture());
+}
+
+#[test]
+fn failing_batch_rolls_back_earlier_mutations() {
+    assert_atomic_rollback_contract(InMemoryPlannerRepository::fixture());
+}
+
+#[test]
+fn reorder_is_atomic_column_scoped_and_deterministic() {
+    assert_reorder_contract(InMemoryPlannerRepository::fixture());
 }

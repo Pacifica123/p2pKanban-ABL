@@ -1,22 +1,20 @@
 # Exact next implementation sequence
 
-A00 froze source/protocol evidence. A01 established the Tauri/React process and security shell. A02 established the explicit presentation transport seam, and A02b–A02d incorporated real Manjaro UserTestSpace build/runtime evidence and fixed the canonical verifier for repeatable Git-less snapshots.
+A00 froze source/protocol evidence. A01 established the Tauri/React process/security shell. A02 established the explicit presentation transport seam and the repeatable Git-less UTS verifier. A03 established the Rust application/domain boundary. A04/A04b froze repository semantics and are Cargo-green in UserTestSpace.
 
-**A03 is now implemented:** the health path terminates at a thin Tauri adapter backed by transport-agnostic Rust `ApplicationServices`/`SystemService` and platform-independent core values. No SQL, HTTP, filesystem, process or network dependency is allowed inside `application/` or `domain/`. This is intentionally a boundary patch, not a persistence port.
+**A05 is now implemented at source/test level:** an exact-pinned bundled SQLite adapter implements the existing `PlannerRepository`; schema v1 carries explicit reader/writer metadata; file-backed profiles require foreign keys, WAL, `synchronous=FULL`, and bounded busy behavior; existing v0 profiles receive a pre-migration online backup + migration journal; integrity/foreign-key checks run before activation; forced-failure tests restore the original profile. The same A04 semantic scenario suite runs against SQLite, plus a close/reopen durability scenario.
 
-Host-dependent compilation/runtime evidence remains driven by the single canonical command `python3 -B tools/uts_verify.py`; lack of a particular tool in another execution environment does not justify weakening deterministic source contracts.
+Run `python3 -B tools/uts_verify.py`. If the new `rusqlite` sources are not yet present in the global Cargo cache, run the same command once with `--allow-network`, then return to the default offline command. Cargo test/build is the authority for A05 host verification.
 
-**A04 is implemented semantically, with an A04b compile correction:** source archaeology from the frozen web/backend + Android snapshots is encoded in `evidence/a04-repository-semantics.json`, and `PlannerRepository`/`PlannerTransaction` plus the reusable Rust contract scenarios freeze CRUD/order/tombstone/access-epoch/atomicity semantics without SQL or Tauri leakage. The first real UTS `cargo test` exposed that the helper `create()` was accidentally concrete while the runner was generic; A04b fixes that type boundary and records the correction. The position-allocation gap remains deliberately unfrozen because web uses 1024 while Android optimistic state uses 1000.
+The exact next architecture patch is **A06 — XDG adapters + multi-instance/locking behavior**.
 
-Run `python3 -B tools/uts_verify.py`; once Cargo test is green, the exact next architecture patch is **A05 — SQLite profile schema + atomic migration engine**.
+A06 exit target:
 
-A05 exit target:
+- define XDG-compliant config/data/state/cache/runtime profile paths without assuming a desktop environment or systemd;
+- move A05 temporary sidecar backup/journal placement into the final per-profile layout while preserving migration atomicity;
+- introduce single-writer profile instance control with graceful stale-lock recovery while retaining SQLite locking as defense-in-depth;
+- define upgrade/uninstall data-preservation ownership and expose profile diagnostics without requiring root;
+- test concurrent launch, stale lock, missing runtime dir, read-only/unwritable paths, and reopen after abnormal termination;
+- keep Secret Service/KWallet integration for A09 and durable application auth/board UI slice for A07.
 
-- add the embedded SQLite adapter without changing A04 application/domain contracts;
-- run the same A04 repository scenario suite against a temporary SQLite profile;
-- introduce schema metadata, foreign keys, WAL/FULL policy and bounded busy behavior where supported;
-- implement atomic migration/journal/backup-integrity behavior before writable activation;
-- keep XDG path ownership and multi-instance policy for A06 rather than hard-coding `$HOME` paths into SQLite code;
-- add persistence/reopen and migration interruption/integrity tests to the canonical UTS plan.
-
-Then, in order: **A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.
+Then, in order: **A06 XDG/instance control → A07 minimal durable auth/workspace/board slice → A08 planner feature persistence**.
