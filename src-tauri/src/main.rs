@@ -5,6 +5,7 @@ mod infrastructure;
 mod navigation_policy;
 
 use application::{
+    planner::{PlannerService, RandomPlannerIds},
     vault::VaultService,
     workspace::{RandomUuidGenerator, WorkspaceService},
 };
@@ -13,7 +14,7 @@ use infrastructure::{
         instance::{self, InstanceRole, SecondaryInstance, ACTIVATE_MAIN_V1},
         xdg::{DesktopPaths, XdgEnvironment},
     },
-    sqlite::workspace::SqliteWorkspaceCatalog,
+    sqlite::{repository::SqlitePlannerRepository, workspace::SqliteWorkspaceCatalog},
 };
 use tauri::{
     webview::{NewWindowResponse, WebviewWindowBuilder},
@@ -48,6 +49,12 @@ fn run() -> Result<(), String> {
         Box::new(workspace_repository),
         Box::new(RandomUuidGenerator),
     );
+    let planner_repository = SqlitePlannerRepository::open(&prepared.paths.profile)
+        .map_err(|err| format!("unable to open durable planner repository: {err:?}"))?;
+    let planner_service = PlannerService::new(
+        Box::new(planner_repository),
+        Box::new(RandomPlannerIds),
+    );
     let vault_service = VaultService::session_only();
 
     let activation_receiver = primary.take_activation_receiver();
@@ -58,6 +65,7 @@ fn run() -> Result<(), String> {
         .manage(diagnostics)
         .manage(application::ApplicationServices::desktop())
         .manage(workspace_service)
+        .manage(planner_service)
         .manage(vault_service)
         .invoke_handler(tauri::generate_handler![
             desktop_api::desktop_api_health,
@@ -67,7 +75,23 @@ fn run() -> Result<(), String> {
             desktop_api::desktop_api_create_workspace,
             desktop_api::desktop_api_list_boards,
             desktop_api::desktop_api_create_board,
-            desktop_api::desktop_api_open_board
+            desktop_api::desktop_api_open_board,
+            desktop_api::desktop_api_list_columns,
+            desktop_api::desktop_api_create_column,
+            desktop_api::desktop_api_list_cards,
+            desktop_api::desktop_api_create_card,
+            desktop_api::desktop_api_move_card,
+            desktop_api::desktop_api_swap_card_order,
+            desktop_api::desktop_api_set_card_archived,
+            desktop_api::desktop_api_delete_card,
+            desktop_api::desktop_api_list_checklists,
+            desktop_api::desktop_api_create_checklist,
+            desktop_api::desktop_api_delete_checklist,
+            desktop_api::desktop_api_list_checklist_items,
+            desktop_api::desktop_api_create_checklist_item,
+            desktop_api::desktop_api_set_checklist_item_done,
+            desktop_api::desktop_api_delete_checklist_item,
+            desktop_api::desktop_api_pending_change_count
         ])
         .setup(move |app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))

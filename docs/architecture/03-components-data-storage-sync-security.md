@@ -168,6 +168,8 @@ The extraction must happen before bulk SQLite work. A repository interface is ac
 
 **[FACT — A04 implementation]** The native repository now contains a storage-independent `PlannerRepository`/`PlannerTransaction` boundary plus executable reference contract scenarios for card CRUD/order/archive/delete+tombstone, exact access-epoch rejection, scoped reorder and transaction rollback. It intentionally contains no SQL adapter. A05 must execute the same scenario suite against SQLite before this extraction is considered proven for the desktop persistence adapter. The exact position-allocation gap is not a contract because the supplied web and Android implementations differ (1024 vs 1000).
 
+**[FACT — A08 implementation]** The native planner now routes column/card/checklist mutations through application/repository APIs into SQLite schema v3. Local mutations and payload-free pending markers share the same SQLite transaction; explicit checklist/item deletions retain versioned tombstones. `LOCAL_APPEND_STEP` is application-local allocation policy only, not a protocol/domain constant, and `pending_local_changes` does not claim A10 convergence.
+
 ## 6A. Existing component reuse/deprecation map
 
 | Existing component | Arch desktop action | Why / boundary |

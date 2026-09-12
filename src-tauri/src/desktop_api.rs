@@ -4,6 +4,9 @@ use tauri::State;
 
 use crate::{
     application::{
+        planner::{
+            CardView, ChecklistItemView, ChecklistView, ColumnView, PlannerService, PlannerServiceError,
+        },
         system::HealthView,
         vault::{VaultMode, VaultService, VaultStatus},
         workspace::{BoardView, WorkspaceService, WorkspaceServiceError, WorkspaceView},
@@ -49,6 +52,75 @@ fn board_to_wire(view: BoardView) -> BTreeMap<&'static str, String> {
         ("workspaceId", view.workspace_id),
         ("title", view.title),
     ])
+}
+
+
+fn column_to_wire(view: ColumnView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("id", view.id),
+        ("boardId", view.board_id),
+        ("title", view.title),
+        ("position", view.position.to_string()),
+    ])
+}
+
+fn card_to_wire(view: CardView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("id", view.id),
+        ("workspaceId", view.workspace_id),
+        ("boardId", view.board_id),
+        ("columnId", view.column_id),
+        ("title", view.title),
+        ("position", view.position.to_string()),
+        ("archived", view.archived.to_string()),
+    ])
+}
+
+fn checklist_to_wire(view: ChecklistView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("id", view.id),
+        ("cardId", view.card_id),
+        ("title", view.title),
+        ("position", view.position.to_string()),
+    ])
+}
+
+fn checklist_item_to_wire(view: ChecklistItemView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("id", view.id),
+        ("checklistId", view.checklist_id),
+        ("title", view.title),
+        ("position", view.position.to_string()),
+        ("isDone", view.is_done.to_string()),
+    ])
+}
+
+fn planner_error_code(error: PlannerServiceError) -> String {
+    match error {
+        PlannerServiceError::EmptyTitle => "TITLE_REQUIRED",
+        PlannerServiceError::TitleTooLong => "TITLE_TOO_LONG",
+        PlannerServiceError::InvalidId => "INVALID_ID",
+        PlannerServiceError::OrderExhausted => "ORDER_EXHAUSTED",
+        PlannerServiceError::RepositoryPoisoned => "PLANNER_SERVICE_UNAVAILABLE",
+        PlannerServiceError::Repository(inner) => match inner {
+            crate::application::repository::RepositoryError::WorkspaceNotFound => "WORKSPACE_NOT_FOUND",
+            crate::application::repository::RepositoryError::StaleAccessEpoch { .. } => "STALE_ACCESS_EPOCH",
+            crate::application::repository::RepositoryError::BoardNotFound => "BOARD_NOT_FOUND",
+            crate::application::repository::RepositoryError::ColumnNotFound => "COLUMN_NOT_FOUND",
+            crate::application::repository::RepositoryError::CardNotFound => "CARD_NOT_FOUND",
+            crate::application::repository::RepositoryError::ScopeMismatch => "SCOPE_MISMATCH",
+            crate::application::repository::RepositoryError::DuplicateCard => "CARD_ALREADY_EXISTS",
+            crate::application::repository::RepositoryError::DuplicateColumn => "COLUMN_ALREADY_EXISTS",
+            crate::application::repository::RepositoryError::DuplicateChecklist => "CHECKLIST_ALREADY_EXISTS",
+            crate::application::repository::RepositoryError::DuplicateChecklistItem => "CHECKLIST_ITEM_ALREADY_EXISTS",
+            crate::application::repository::RepositoryError::ChecklistNotFound => "CHECKLIST_NOT_FOUND",
+            crate::application::repository::RepositoryError::ChecklistItemNotFound => "CHECKLIST_ITEM_NOT_FOUND",
+            crate::application::repository::RepositoryError::DuplicateReorderItem => "DUPLICATE_REORDER_ITEM",
+            crate::application::repository::RepositoryError::Tombstoned => "ENTITY_TOMBSTONED",
+            crate::application::repository::RepositoryError::StorageFailure => "PLANNER_STORAGE_FAILURE",
+        },
+    }
+    .to_owned()
 }
 
 fn vault_status_to_wire(status: VaultStatus) -> BTreeMap<&'static str, String> {
@@ -154,6 +226,219 @@ pub fn desktop_api_open_board(
         .open_board(&workspaceId, &boardId)
         .map(board_to_wire)
         .map_err(workspace_error_code)
+}
+
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_columns(
+    workspaceId: String,
+    boardId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<Vec<BTreeMap<&'static str, String>>, String> {
+    planner
+        .list_columns(&workspaceId, &boardId)
+        .map(|items| items.into_iter().map(column_to_wire).collect())
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_create_column(
+    workspaceId: String,
+    boardId: String,
+    title: String,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .create_column(&workspaceId, &boardId, &title)
+        .map(column_to_wire)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_cards(
+    workspaceId: String,
+    boardId: String,
+    includeArchived: bool,
+    planner: State<'_, PlannerService>,
+) -> Result<Vec<BTreeMap<&'static str, String>>, String> {
+    planner
+        .list_cards(&workspaceId, &boardId, includeArchived)
+        .map(|items| items.into_iter().map(card_to_wire).collect())
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_create_card(
+    workspaceId: String,
+    boardId: String,
+    columnId: String,
+    title: String,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .create_card(&workspaceId, &boardId, &columnId, &title)
+        .map(card_to_wire)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_move_card(
+    workspaceId: String,
+    cardId: String,
+    targetColumnId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .move_card(&workspaceId, &cardId, &targetColumnId)
+        .map(card_to_wire)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_swap_card_order(
+    workspaceId: String,
+    cardId: String,
+    otherCardId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<(), String> {
+    planner
+        .swap_card_order(&workspaceId, &cardId, &otherCardId)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_set_card_archived(
+    workspaceId: String,
+    cardId: String,
+    archived: bool,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .set_card_archived(&workspaceId, &cardId, archived)
+        .map(card_to_wire)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_delete_card(
+    workspaceId: String,
+    cardId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<(), String> {
+    planner.delete_card(&workspaceId, &cardId).map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_checklists(
+    workspaceId: String,
+    cardId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<Vec<BTreeMap<&'static str, String>>, String> {
+    planner
+        .list_checklists(&workspaceId, &cardId)
+        .map(|items| items.into_iter().map(checklist_to_wire).collect())
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_create_checklist(
+    workspaceId: String,
+    cardId: String,
+    title: String,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .create_checklist(&workspaceId, &cardId, &title)
+        .map(checklist_to_wire)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_delete_checklist(
+    workspaceId: String,
+    checklistId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<(), String> {
+    planner
+        .delete_checklist(&workspaceId, &checklistId)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_checklist_items(
+    workspaceId: String,
+    checklistId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<Vec<BTreeMap<&'static str, String>>, String> {
+    planner
+        .list_checklist_items(&workspaceId, &checklistId)
+        .map(|items| items.into_iter().map(checklist_item_to_wire).collect())
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_create_checklist_item(
+    workspaceId: String,
+    checklistId: String,
+    title: String,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .create_checklist_item(&workspaceId, &checklistId, &title)
+        .map(checklist_item_to_wire)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_set_checklist_item_done(
+    workspaceId: String,
+    itemId: String,
+    done: bool,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .set_checklist_item_done(&workspaceId, &itemId, done)
+        .map(checklist_item_to_wire)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_delete_checklist_item(
+    workspaceId: String,
+    itemId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<(), String> {
+    planner
+        .delete_checklist_item(&workspaceId, &itemId)
+        .map_err(planner_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_pending_change_count(
+    workspaceId: String,
+    boardId: String,
+    planner: State<'_, PlannerService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    planner
+        .pending_change_count(&workspaceId, &boardId)
+        .map(|count| BTreeMap::from([("count", count.to_string())]))
+        .map_err(planner_error_code)
 }
 
 #[cfg(test)]

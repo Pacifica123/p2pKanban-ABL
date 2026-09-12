@@ -3,6 +3,11 @@ import { ApiError } from '../api/errors';
 import type {
   BackendVersion,
   BoardSummary,
+  CardSummary,
+  ChecklistItemSummary,
+  ChecklistSummary,
+  ColumnSummary,
+  PendingChangeCount,
   ProfileDiagnostics,
   VaultStatus,
   WorkspaceSummary,
@@ -18,6 +23,23 @@ const DESKTOP_CREATE_WORKSPACE_COMMAND = 'desktop_api_create_workspace' as const
 const DESKTOP_LIST_BOARDS_COMMAND = 'desktop_api_list_boards' as const;
 const DESKTOP_CREATE_BOARD_COMMAND = 'desktop_api_create_board' as const;
 const DESKTOP_OPEN_BOARD_COMMAND = 'desktop_api_open_board' as const;
+
+const DESKTOP_LIST_COLUMNS_COMMAND = 'desktop_api_list_columns' as const;
+const DESKTOP_CREATE_COLUMN_COMMAND = 'desktop_api_create_column' as const;
+const DESKTOP_LIST_CARDS_COMMAND = 'desktop_api_list_cards' as const;
+const DESKTOP_CREATE_CARD_COMMAND = 'desktop_api_create_card' as const;
+const DESKTOP_MOVE_CARD_COMMAND = 'desktop_api_move_card' as const;
+const DESKTOP_SWAP_CARD_ORDER_COMMAND = 'desktop_api_swap_card_order' as const;
+const DESKTOP_SET_CARD_ARCHIVED_COMMAND = 'desktop_api_set_card_archived' as const;
+const DESKTOP_DELETE_CARD_COMMAND = 'desktop_api_delete_card' as const;
+const DESKTOP_LIST_CHECKLISTS_COMMAND = 'desktop_api_list_checklists' as const;
+const DESKTOP_CREATE_CHECKLIST_COMMAND = 'desktop_api_create_checklist' as const;
+const DESKTOP_DELETE_CHECKLIST_COMMAND = 'desktop_api_delete_checklist' as const;
+const DESKTOP_LIST_CHECKLIST_ITEMS_COMMAND = 'desktop_api_list_checklist_items' as const;
+const DESKTOP_CREATE_CHECKLIST_ITEM_COMMAND = 'desktop_api_create_checklist_item' as const;
+const DESKTOP_SET_CHECKLIST_ITEM_DONE_COMMAND = 'desktop_api_set_checklist_item_done' as const;
+const DESKTOP_DELETE_CHECKLIST_ITEM_COMMAND = 'desktop_api_delete_checklist_item' as const;
+const DESKTOP_PENDING_CHANGE_COUNT_COMMAND = 'desktop_api_pending_change_count' as const;
 
 function unsupported(path: string, method: string): never {
   throw new ApiError(`Desktop route is not implemented yet: ${method} ${path}`, {
@@ -88,6 +110,71 @@ export const desktopTransport: ApiTransport = {
         workspaceId: body.workspaceId,
         boardId: body.boardId,
       })) as T;
+    }
+
+    if (method === 'POST' && path === '/planner/columns/list') {
+      const body = jsonBody<{ workspaceId: string; boardId: string }>(init);
+      return (await invoke<ColumnSummary[]>(DESKTOP_LIST_COLUMNS_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/columns') {
+      const body = jsonBody<{ workspaceId: string; boardId: string; title: string }>(init);
+      return (await invoke<ColumnSummary>(DESKTOP_CREATE_COLUMN_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/cards/list') {
+      const body = jsonBody<{ workspaceId: string; boardId: string; includeArchived: boolean }>(init);
+      return (await invoke<CardSummary[]>(DESKTOP_LIST_CARDS_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/cards') {
+      const body = jsonBody<{ workspaceId: string; boardId: string; columnId: string; title: string }>(init);
+      return (await invoke<CardSummary>(DESKTOP_CREATE_CARD_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/cards/move') {
+      const body = jsonBody<{ workspaceId: string; cardId: string; targetColumnId: string }>(init);
+      return (await invoke<CardSummary>(DESKTOP_MOVE_CARD_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/cards/swap-order') {
+      const body = jsonBody<{ workspaceId: string; cardId: string; otherCardId: string }>(init);
+      return (await invoke<void>(DESKTOP_SWAP_CARD_ORDER_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/cards/archive') {
+      const body = jsonBody<{ workspaceId: string; cardId: string; archived: boolean }>(init);
+      return (await invoke<CardSummary>(DESKTOP_SET_CARD_ARCHIVED_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/cards/delete') {
+      const body = jsonBody<{ workspaceId: string; cardId: string }>(init);
+      return (await invoke<void>(DESKTOP_DELETE_CARD_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/checklists/list') {
+      const body = jsonBody<{ workspaceId: string; cardId: string }>(init);
+      return (await invoke<ChecklistSummary[]>(DESKTOP_LIST_CHECKLISTS_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/checklists') {
+      const body = jsonBody<{ workspaceId: string; cardId: string; title: string }>(init);
+      return (await invoke<ChecklistSummary>(DESKTOP_CREATE_CHECKLIST_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/checklists/delete') {
+      const body = jsonBody<{ workspaceId: string; checklistId: string }>(init);
+      return (await invoke<void>(DESKTOP_DELETE_CHECKLIST_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/checklist-items/list') {
+      const body = jsonBody<{ workspaceId: string; checklistId: string }>(init);
+      return (await invoke<ChecklistItemSummary[]>(DESKTOP_LIST_CHECKLIST_ITEMS_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/checklist-items') {
+      const body = jsonBody<{ workspaceId: string; checklistId: string; title: string }>(init);
+      return (await invoke<ChecklistItemSummary>(DESKTOP_CREATE_CHECKLIST_ITEM_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/checklist-items/done') {
+      const body = jsonBody<{ workspaceId: string; itemId: string; done: boolean }>(init);
+      return (await invoke<ChecklistItemSummary>(DESKTOP_SET_CHECKLIST_ITEM_DONE_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/checklist-items/delete') {
+      const body = jsonBody<{ workspaceId: string; itemId: string }>(init);
+      return (await invoke<void>(DESKTOP_DELETE_CHECKLIST_ITEM_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/planner/pending-count') {
+      const body = jsonBody<{ workspaceId: string; boardId: string }>(init);
+      return (await invoke<PendingChangeCount>(DESKTOP_PENDING_CHANGE_COUNT_COMMAND, body)) as T;
     }
     return unsupported(path, method);
   },

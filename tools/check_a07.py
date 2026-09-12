@@ -49,7 +49,8 @@ for token in (
     "MIGRATION_V1_TO_V2_ID",
     "MIGRATION_V1_TO_V2_SHA256",
     "apply_v1_to_v2",
-    "v1_profile_migrates_to_v2_and_preserves_workspace_board_identity",
+    "v1_profile_migrates_to_v",
+    "preserves_workspace_board_identity",
     "forced_migration_failure_restores_existing_v0_profile",
 ):
     if token not in migration:

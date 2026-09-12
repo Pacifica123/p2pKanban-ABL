@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A07b",
-  "description": "Canonical UserTestSpace verification through A07b. A07b corrects the first A07 UTS frontend literal-type and Rust migration-journal format-string compile defects; all A07 durability/vault contracts remain unchanged and A08 is still the next architecture stage.",
+  "stage": "A08",
+  "description": "Canonical UserTestSpace verification through A08. A08 adds schema-v3 durable columns/cards/archive/delete/checklist basics, tombstones and payload-free pending-local markers behind the application/repository boundary; pending state is not remote convergence.",
   "deterministic": [
     {
       "id": "a00",
@@ -130,6 +130,14 @@
         "-B",
         "tools/check_a07b.py"
       ]
+    },
+    {
+      "id": "a08",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a08.py"
+      ]
     }
   ],
   "frontend": {
@@ -240,6 +248,20 @@
           "-B",
           "tools/a06_host_instance_probe.py"
         ]
+      },
+      {
+        "id": "a08-planner-durability",
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "src-tauri/Cargo.toml",
+          "--locked",
+          "--offline",
+          "a08_",
+          "--",
+          "--nocapture"
+        ]
       }
     ]
   },
@@ -249,6 +271,9 @@
     "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified",
     "With a visible primary window, optionally confirm that starting a second instance raises/focuses the existing window rather than opening another window",
     "A07 UI: create a workspace and board, close the native app, reopen it, then confirm the same workspace/board can be selected again",
-    "A07 UI: confirm vault status is session-only and durable secrets are disabled; no secret value should ever be rendered"
+    "A07 UI: confirm vault status is session-only and durable secrets are disabled; no secret value should ever be rendered",
+    "A08 UI: create a column, card, checklist and checklist item; move/archive/restore the card and toggle the item, then close/reopen and confirm durable state",
+    "A08 UI: delete a checklist/item/card and confirm it does not reappear after reopen",
+    "A08 pending count is local-only evidence; do not interpret it as remote convergence before A10"
   ]
 }

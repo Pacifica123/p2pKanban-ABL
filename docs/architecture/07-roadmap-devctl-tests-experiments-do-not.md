@@ -35,7 +35,7 @@ Every stage should be deliverable as one or a small bounded series of devctl pat
 
 **[FACT — implementation status]** A03 and A04 are now present in the Arch-native repository. A04 provides a pure Rust reference adapter and reusable semantic scenarios; SQLite execution of those same scenarios remains the A05 gate, so this status does not claim dual-adapter persistence verification yet.
 
-**[FACT — implementation status after A07]** A05/A05b and A06 are UTS-green. A07 adds schema v2 plus the first real durable workspace/board application flow through typed Tauri IPC and an explicit session-only `SecretVault` boundary. It does not introduce remote auth, durable secret material, card semantics or sync. A08 remains the next planner-persistence stage; production Linux secret providers remain A09.
+**[FACT — implementation status after A08 source gate]** A05/A05b, A06 and A07/A07b are UTS-green. A08 adds schema v3 plus the durable offline planner path for columns, cards, archive/move/delete, checklist basics, tombstones and payload-free pending-local markers through typed Tauri IPC and the repository boundary. Its host UTS Cargo/durability evidence is still pending at patch creation time. Pending markers are not remote convergence; A10 owns sync. Production Linux secret providers remain A09.
 
 ## 3. Suggested devctl patch discipline
 

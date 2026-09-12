@@ -33,6 +33,8 @@ id_type!(WorkspaceId, "workspace");
 id_type!(BoardId, "board");
 id_type!(ColumnId, "column");
 id_type!(CardId, "card");
+id_type!(ChecklistId, "checklist");
+id_type!(ChecklistItemId, "checklist_item");
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceRecord {
@@ -48,6 +50,13 @@ pub struct BoardRecord {
     pub title: String,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColumnRecord {
+    pub id: ColumnId,
+    pub board_id: BoardId,
+    pub title: String,
+    pub position: OrderKey,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AccessEpoch(u64);
@@ -154,7 +163,66 @@ pub struct CardTombstone {
     pub version: VersionStamp,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChecklistRecord {
+    pub id: ChecklistId,
+    pub workspace_id: WorkspaceId,
+    pub board_id: BoardId,
+    pub card_id: CardId,
+    pub title: String,
+    pub position: OrderKey,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChecklistItemRecord {
+    pub id: ChecklistItemId,
+    pub checklist_id: ChecklistId,
+    pub title: String,
+    pub position: OrderKey,
+    pub is_done: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChecklistTombstone {
+    pub workspace_id: WorkspaceId,
+    pub board_id: BoardId,
+    pub card_id: CardId,
+    pub checklist_id: ChecklistId,
+    pub version: VersionStamp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChecklistItemTombstone {
+    pub workspace_id: WorkspaceId,
+    pub board_id: BoardId,
+    pub card_id: CardId,
+    pub checklist_id: ChecklistId,
+    pub item_id: ChecklistItemId,
+    pub version: VersionStamp,
+}
+
 pub fn compare_card_order(left: &CardRecord, right: &CardRecord) -> Ordering {
+    left.position
+        .compare(right.position)
+        .then_with(|| left.id.cmp(&right.id))
+}
+
+pub fn compare_column_order(left: &ColumnRecord, right: &ColumnRecord) -> Ordering {
+    left.position
+        .compare(right.position)
+        .then_with(|| left.id.cmp(&right.id))
+}
+
+pub fn compare_checklist_order(left: &ChecklistRecord, right: &ChecklistRecord) -> Ordering {
+    left.position
+        .compare(right.position)
+        .then_with(|| left.id.cmp(&right.id))
+}
+
+pub fn compare_checklist_item_order(
+    left: &ChecklistItemRecord,
+    right: &ChecklistItemRecord,
+) -> Ordering {
     left.position
         .compare(right.position)
         .then_with(|| left.id.cmp(&right.id))

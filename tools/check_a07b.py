@@ -44,8 +44,8 @@ if '"{\\n  \\"formatVersion\\": 1,' in migration:
 # frontendDist failure in that UTS run was downstream of the failed frontend
 # build. Keep packaged-asset ordering explicit in the canonical verifier plan.
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A07b":
-    fail("canonical UTS plan did not advance to A07b")
+if plan.get("schemaVersion") != 1:
+    fail("unsupported canonical UTS plan schema")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 for required in ("a07", "a07b"):
     if required not in ids:

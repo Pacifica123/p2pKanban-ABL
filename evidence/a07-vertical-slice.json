@@ -17,7 +17,7 @@
   "sources": [
     {
       "path": "docs/architecture/03-components-data-storage-sync-security.md",
-      "sha256": "8dc382f61c74f6e220ae1f6345920dbbc34f30e502555c30800c365d973e7c08"
+      "sha256": "fbb2b92d691a18d0704c09f19296d0a51bd0a748ff227e0dc00e8e47be7df306"
     },
     {
       "path": "docs/architecture/06-compatibility-migration.md",
