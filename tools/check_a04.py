@@ -106,6 +106,12 @@ for token in (
     if token not in contract:
         fail("contract suite lost semantic assertion " + token)
 
+# Helper functions used by the generic contract runner must stay adapter-agnostic.
+if "fn create(repo: &mut InMemoryPlannerRepository" in contract:
+    fail("contract helper create() is coupled to InMemoryPlannerRepository")
+if not re.search(r"fn\s+create\s*<\s*R\s*:\s*PlannerRepository\s*>\s*\(\s*repo\s*:\s*&mut\s+R", contract):
+    fail("contract helper create() must be generic over PlannerRepository")
+
 # Evidence anchors/classification are part of the SSOT and must be hash-shaped.
 evidence = json.loads(read("evidence/a04-repository-semantics.json"))
 if evidence.get("formatVersion") != 1 or evidence.get("stage") != "A04":
@@ -145,8 +151,8 @@ a03 = read("tools/check_a03.py")
 if 'plan.get("stage") != "A03"' in a03:
     fail("A03 checker still freezes the UTS plan at A03")
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A04":
-    fail("canonical UTS plan did not advance to A04")
+if plan.get("schemaVersion") != 1:
+    fail("canonical UTS plan schema mismatch")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 if "a04" not in ids or ids.index("a04") <= ids.index("a03"):
     fail("A04 deterministic gate must follow A03")

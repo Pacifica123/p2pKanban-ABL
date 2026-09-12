@@ -6,9 +6,9 @@ A00 froze source/protocol evidence. A01 established the Tauri/React process and 
 
 Host-dependent compilation/runtime evidence remains driven by the single canonical command `python3 -B tools/uts_verify.py`; lack of a particular tool in another execution environment does not justify weakening deterministic source contracts.
 
-**A04 is now implemented:** source archaeology from the frozen web/backend + Android snapshots is encoded in `evidence/a04-repository-semantics.json`, and `PlannerRepository`/`PlannerTransaction` plus the reusable Rust contract scenarios freeze CRUD/order/tombstone/access-epoch/atomicity semantics without SQL or Tauri leakage. The position-allocation gap remains deliberately unfrozen because web uses 1024 while Android optimistic state uses 1000.
+**A04 is implemented semantically, with an A04b compile correction:** source archaeology from the frozen web/backend + Android snapshots is encoded in `evidence/a04-repository-semantics.json`, and `PlannerRepository`/`PlannerTransaction` plus the reusable Rust contract scenarios freeze CRUD/order/tombstone/access-epoch/atomicity semantics without SQL or Tauri leakage. The first real UTS `cargo test` exposed that the helper `create()` was accidentally concrete while the runner was generic; A04b fixes that type boundary and records the correction. The position-allocation gap remains deliberately unfrozen because web uses 1024 while Android optimistic state uses 1000.
 
-The exact next architecture patch is **A05 — SQLite profile schema + atomic migration engine**.
+Run `python3 -B tools/uts_verify.py`; once Cargo test is green, the exact next architecture patch is **A05 — SQLite profile schema + atomic migration engine**.
 
 A05 exit target:
 

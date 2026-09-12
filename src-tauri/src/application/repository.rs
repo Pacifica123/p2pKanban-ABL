@@ -1,5 +1,5 @@
 use crate::domain::planner::{
-    AccessEpoch, BoardId, CardId, CardLifecycle, CardRecord, CardTombstone, ColumnId, OrderKey,
+    AccessEpoch, BoardId, CardId, CardRecord, CardTombstone, ColumnId, OrderKey,
     VersionStamp, WorkspaceId,
 };
 

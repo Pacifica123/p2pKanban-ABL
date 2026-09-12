@@ -296,7 +296,7 @@ fn transaction(mutations: Vec<PlannerMutation>) -> PlannerTransaction {
     }
 }
 
-fn create(repo: &mut InMemoryPlannerRepository, card: CardRecord) {
+fn create<R: PlannerRepository>(repo: &mut R, card: CardRecord) {
     repo.commit(transaction(vec![PlannerMutation::CreateCard(card)]))
         .unwrap();
 }
