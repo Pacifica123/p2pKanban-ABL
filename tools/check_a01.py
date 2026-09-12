@@ -142,8 +142,8 @@ try:
     cargo_doc = tomllib.loads(cargo)
 except tomllib.TOMLDecodeError as exc:
     fail(f"invalid src-tauri/Cargo.toml: {exc}")
-if cargo_doc.get("package", {}).get("rust-version") != "1.77.2":
-    fail("Rust floor must stay explicit and aligned with the selected Tauri release")
+if cargo_doc.get("package", {}).get("rust-version") != "1.90":
+    fail("Rust floor must stay explicit and aligned with Tauri 2.11.5 upstream MSRV")
 if cargo_doc.get("dependencies", {}).get("tauri", {}).get("version") != "=2.11.5":
     fail("tauri dependency must be exactly pinned to 2.11.5")
 if cargo_doc.get("build-dependencies", {}).get("tauri-build", {}).get("version") != "=2.6.3":
@@ -197,11 +197,10 @@ for pattern in ("*.sqlite", "*.sqlite3", "*.db", "*.db-wal", "*.db-shm", "*.pem"
         fail(f"runtime/secret artifact present: {pattern}")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "partially implemented (A01a+A01b harness" not in status or "A01c" not in status:
-    fail("implementation ledger must report A01a+A01b harness honestly and point to A01c")
-next_doc = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A01c — resolver lock + Arch host build/launch evidence" not in next_doc:
-    fail("next-patch SSOT is not A01c")
+if "| A01 Tauri 2 shell + packaged React/Vite asset |" not in status:
+    fail("implementation ledger lost A01 traceability")
+if "**partially implemented" not in status and "**implemented**" not in status:
+    fail("implementation ledger must state an explicit A01 implementation status")
 
 print("A01 source/security contract: OK")
-print("NOTE: compile/launch evidence is intentionally NOT claimed yet; see docs/evidence/A01B_BUILD_ACCEPTANCE.md")
+print("NOTE: source/security regression gate does not itself claim compile/launch evidence")

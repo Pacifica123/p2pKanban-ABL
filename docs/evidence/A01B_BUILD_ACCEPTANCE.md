@@ -40,4 +40,4 @@ A01 remains incomplete until a provisioned Arch-family host:
 5. verifies hostile HTTP/HTTPS/file/data/javascript navigation, `window.open`, and download denial in the real WebView;
 6. verifies no Docker/PostgreSQL/Node process, listening localhost socket, root requirement, or mandatory system/user service is needed at runtime.
 
-That evidence is **A01c — resolver lock + Arch host build/launch evidence**. Only after A01c may A01 be marked implemented and A02 begin.
+A01b originally named that materialization step **A01c**. During A01c, upstream re-verification exposed the incorrect A01a Rust-floor claim and showed that a reusable runtime process/socket/XDG evidence collector was still missing. A01c therefore performs that explicit correction and adds the host runtime probe without fabricating execution. The remaining materialized lock/build/real-WebView evidence is now **A01d**. Only after A01d may A01 be marked implemented and A02 begin.

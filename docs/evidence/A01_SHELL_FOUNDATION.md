@@ -8,7 +8,7 @@ A01 is intentionally split into two bounded devctl patches. This file records th
 
 - The A00 web evidence uses React/Vite and its locked frontend resolves React `18.3.1` / React DOM `18.3.1`; A01a keeps those presentation-major semantics instead of upgrading the UI while changing the process model.
 - The accepted SSOT selects Tauri 2 + system WebKitGTK, one normal user-session process, no mandatory localhost backend and no mandatory service.
-- Upstream Tauri documentation observed for this patch identifies Tauri `2.11.5`, `tauri-build` `2.6.3`, and Tauri's declared Rust floor `1.77.2`.
+- **Superseded by A01c / DEBT-A01-002:** A01a recorded Tauri's Rust floor as `1.77.2`. Re-checking the selected Tauri `2.11.5` upstream workspace during A01c shows `rust-version = "1.90"`; the project manifest is corrected accordingly.
 - Tauri 2 exposes `WebviewWindowBuilder::on_navigation` and `on_new_window`; A01a uses those Rust-side hooks rather than relying only on DOM code.
 - The patch-construction runner has Node/npm but no Rust/Cargo toolchain and no crates cache. Network access to npm/crates/static Rust endpoints is unavailable. Therefore a trustworthy project `Cargo.lock` and a real Tauri compile cannot be generated or asserted here.
 
@@ -38,7 +38,7 @@ A01 is **not complete** until a provisioned Arch-family build host performs all 
 6. inspect the process/listener state and confirm no Docker, PostgreSQL, Node process, localhost listener or systemd user service is required at runtime;
 7. record WebKitGTK/GTK/glibc versions and session type as environment evidence, without promoting that single host to the full Wayland/X11 compatibility claim.
 
-These are A01b acceptance tasks, not hidden green checks in A01a.
+These are host acceptance tasks, not hidden green checks in A01a. A01b added the strict offline build harness; A01c adds the runtime evidence collector; A01d must materialize the remaining host evidence.
 
 ## A01b follow-up
 

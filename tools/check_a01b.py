@@ -31,11 +31,10 @@ evidence = read("docs/evidence/A01B_BUILD_ACCEPTANCE.md")
 for token in ("partially implemented", "A01c", "FACT", "UNRESOLVED EXPERIMENT", "no `cargo`/`rustc`"):
     if token not in evidence: fail("A01b evidence missing honest-status marker: " + token)
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "A01a+A01b harness" not in status or "A01c" not in status:
-    fail("implementation ledger must keep A01 partial and name A01c")
-next_doc = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A01c — resolver lock + Arch host build/launch evidence" not in next_doc:
-    fail("next patch SSOT must be A01c")
+if "A01b" not in status:
+    fail("implementation ledger lost A01b traceability")
+if "**partially implemented" not in status and "**implemented**" not in status:
+    fail("implementation ledger must state an explicit A01 status")
 
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
 if "DEBT-A01-001" not in debt:

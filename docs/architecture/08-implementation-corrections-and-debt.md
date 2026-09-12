@@ -33,3 +33,13 @@ The patch must not change workspace policy or devctl itself. Therefore A00 recor
 The patch-construction environment does not contain Cargo/rustc or WebKitGTK development metadata and cannot reach external package/registry endpoints. Installing a hidden toolchain during `devctl start`, weakening checks to a source grep, or fabricating `Cargo.lock` would all violate the repository's evidence rules and unstable-network constraint.
 
 A01b therefore adds a fail-closed offline host harness. Dependency/cache population is an explicit build-time preparation activity outside `devctl start`; normal deterministic patch checks remain network-free. A01c must execute the strict harness and real WebView runtime probes on a provisioned Arch-family host before A01 can become `implemented`.
+
+## DEBT-A01-002 — A01a recorded an obsolete/incorrect Tauri Rust floor
+
+**Classification:** [FACT] from current upstream Tauri 2.11.5 workspace metadata, re-checked during A01c.  
+**Architecture impact:** build compatibility/evidence; ADR-001 process model is unchanged.  
+**Status:** source declaration corrected in A01c; host verification remains open until A01d.
+
+A01a recorded `rust-version = 1.77.2` and described that value as the selected Tauri release's Rust floor. Current upstream Tauri 2.11.5 workspace metadata declares **Rust 1.90** via `rust-version = 1.90`, and the `tauri` 2.11.5 crate inherits that workspace value. A01c therefore changes the native package declaration to `1.90` and supersedes the A01a compatibility claim.
+
+This correction does **not** claim that 1.90 is the final reproducible build toolchain. The exact toolchain pin must be chosen from a successful A01d Arch-host build and cached/prepared explicitly so offline builds do not unexpectedly invoke rustup/network access.

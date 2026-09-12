@@ -6,11 +6,11 @@ This repository follows the implementation sequence `A00 … A19` from the accep
 
 ## Current state
 
-**A00 is implemented. A01a source/security foundation is implemented; A01 runtime acceptance is not yet claimed.**
+**A00 is implemented. A01a source/security foundation, A01b offline-build harness and A01c host-evidence contract are implemented; A01 compiled/WebView runtime acceptance is not yet claimed.**
 
-A01a adds the permanent React/Vite + Tauri 2 source layout, a Rust-created WebView window, deny-by-default navigation/new-window/download hooks, CSP with network connections disabled, and an empty Tauri capability set. It deliberately does not introduce a local HTTP server, filesystem/process plugins, persistence, auth or sync.
+A01c also corrects an implementation-evidence error: the selected Tauri 2.11.5 workspace declares Rust **1.90** as its floor, not the previously recorded 1.77.2. The correction is tracked in `DEBT-A01-002` rather than being hidden in the manifest.
 
-The patch-construction runner had no Rust/Cargo toolchain or crates cache, so it would be dishonest to fabricate `Cargo.lock` or claim a successful Tauri compile. The exact next patch is **A01b — resolver-generated Cargo lock + offline build/launch/security evidence**. After A01b is green, proceed to **A02 — explicit web↔desktop transport adapter**.
+The patch-construction environment still cannot resolver-generate `src-tauri/Cargo.lock` or execute an Arch graphical WebView build. Those facts remain fail-closed. The exact next patch is **A01d — materialized Cargo lock + Arch build/WebView runtime evidence**. Only after A01d passes does the roadmap advance to **A02 — explicit web↔desktop transport adapter**.
 
 ## Source layout
 
@@ -19,7 +19,7 @@ The patch-construction runner had no Rust/Cargo toolchain or crates cache, so it
 - `docs/architecture/` — implementation-driving architecture and ADRs.
 - `docs/IMPLEMENTATION_STATUS.md` — decision → files/tests → status → next patch traceability.
 - `docs/evidence/A00_EVIDENCE_BASELINE.md` — frozen source facts.
-- `docs/evidence/A01_SHELL_FOUNDATION.md` — A01a evidence, classifications and A01b acceptance gap.
+- `docs/evidence/A01*.md` — shell/build/runtime evidence boundaries and unresolved host experiments.
 - `evidence/` and `fixtures/` — frozen compatibility evidence for later stages.
 
 ## Deterministic checks
@@ -27,6 +27,18 @@ The patch-construction runner had no Rust/Cargo toolchain or crates cache, so it
 ```bash
 python3 -B tools/check_a00.py
 python3 -B tools/check_a01.py
+python3 -B tools/check_a01b.py
+python3 -B tools/check_a01c.py
+npm install --package-lock-only --offline --ignore-scripts --no-audit --no-fund
 ```
 
-These checks are offline-only and do not install packages, contact registries, start services or mutate `.devctl`. They validate source/security contracts and npm lock consistency structurally. Real frontend/Rust compilation is an explicit A01b gate rather than a fake-green A01a check.
+These generic checks are offline-only and do not install system packages, contact registries, start services or mutate `.devctl`. Real host acceptance is deliberately separate and strict:
+
+```bash
+python3 -B tools/a01b_host_acceptance.py doctor
+python3 -B tools/a01b_host_acceptance.py offline-build
+python3 -B tools/a01c_host_runtime_probe.py doctor
+python3 -B tools/a01c_host_runtime_probe.py launch-probe --report /tmp/p2pkanban-a01c-runtime.json
+```
+
+Missing build/session prerequisites are failure for the corresponding host acceptance command, never a fake-green skip.
