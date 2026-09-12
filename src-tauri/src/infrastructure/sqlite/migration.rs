@@ -9,14 +9,18 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::infrastructure::profile::{write_private_file, ProfileStoragePaths};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 1;
-pub const MIN_READER_SCHEMA_VERSION: u32 = 1;
-pub const MIN_WRITER_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_SCHEMA_VERSION: u32 = 2;
+pub const MIN_READER_SCHEMA_VERSION: u32 = 2;
+pub const MIN_WRITER_SCHEMA_VERSION: u32 = 2;
 pub const BUSY_TIMEOUT_MS: u64 = 2_500;
 
 pub const MIGRATION_V0_TO_V1_ID: &str = "desktop-0001-initial-planner";
 pub const MIGRATION_V0_TO_V1_SHA256: &str = "c88155c8d7093f5fe15d076043aebe0359746fadf509fc0acb3883188b103594";
+pub const MIGRATION_V1_TO_V2_ID: &str = "desktop-0002-workspace-board-titles";
+pub const MIGRATION_V1_TO_V2_SHA256: &str = "01cdfaa3b020e1fbab4abbd45640f0726aa43d08bd1f20837856300dedbe1901";
+
 const SCHEMA_V1: &str = include_str!("../../../migrations/0001_initial.sql");
+const SCHEMA_V2: &str = include_str!("../../../migrations/0002_workspace_board_titles.sql");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProfileSchemaInfo {
@@ -56,7 +60,7 @@ fn write_journal(
     state: &str,
 ) -> Result<(), ProfileOpenError> {
     let body = format!(
-        "{{\n  \"formatVersion\": 1,\n  \"fromSchema\": {from},\n  \"toSchema\": {to},\n  \"state\": \"{state}\"\n}}\n"
+        "{\n  \"formatVersion\": 1,\n  \"fromSchema\": {from},\n  \"toSchema\": {to},\n  \"state\": \"{state}\"\n}\n"
     );
     write_private_file(layout.migration_journal(), body.as_bytes()).map_err(|_| ProfileOpenError::Io)
 }
@@ -118,7 +122,20 @@ fn backup_is_valid(path: &Path) -> Result<(), ProfileOpenError> {
     check_integrity(&conn)
 }
 
-fn apply_v0_to_v1(conn: &mut Connection, force_failure: bool) -> Result<(), ProfileOpenError> {
+fn record_migration(
+    tx: &rusqlite::Transaction<'_>,
+    id: &str,
+    checksum: &str,
+    applied_at: i64,
+) -> Result<(), ProfileOpenError> {
+    tx.execute(
+        "INSERT INTO schema_migrations(id, checksum, applied_at_unix_ms) VALUES (?1, ?2, ?3)",
+        rusqlite::params![id, checksum, applied_at],
+    )?;
+    Ok(())
+}
+
+fn apply_v0_to_v1(conn: &mut Connection) -> Result<(), ProfileOpenError> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
     tx.execute_batch(SCHEMA_V1)?;
     let applied_at = epoch_millis();
@@ -126,10 +143,16 @@ fn apply_v0_to_v1(conn: &mut Connection, force_failure: bool) -> Result<(), Prof
         "UPDATE profile_meta SET created_at_unix_ms = ?1 WHERE singleton = 1",
         [applied_at],
     )?;
-    tx.execute(
-        "INSERT INTO schema_migrations(id, checksum, applied_at_unix_ms) VALUES (?1, ?2, ?3)",
-        rusqlite::params![MIGRATION_V0_TO_V1_ID, MIGRATION_V0_TO_V1_SHA256, applied_at],
-    )?;
+    record_migration(&tx, MIGRATION_V0_TO_V1_ID, MIGRATION_V0_TO_V1_SHA256, applied_at)?;
+    tx.commit()?;
+    Ok(())
+}
+
+fn apply_v1_to_v2(conn: &mut Connection, force_failure: bool) -> Result<(), ProfileOpenError> {
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    tx.execute_batch(SCHEMA_V2)?;
+    let applied_at = epoch_millis();
+    record_migration(&tx, MIGRATION_V1_TO_V2_ID, MIGRATION_V1_TO_V2_SHA256, applied_at)?;
     if force_failure {
         return Err(ProfileOpenError::MigrationRecovered);
     }
@@ -153,7 +176,7 @@ fn migrate_if_needed(
     if from == CURRENT_SCHEMA_VERSION {
         return Ok(());
     }
-    if from != 0 {
+    if from > 1 {
         return Err(ProfileOpenError::UnsupportedSchema {
             found: from,
             max_writer: CURRENT_SCHEMA_VERSION,
@@ -172,7 +195,21 @@ fn migrate_if_needed(
     }
     write_journal(layout, from, CURRENT_SCHEMA_VERSION, "prepared")?;
 
-    let migration_result = apply_v0_to_v1(conn, force_failure).and_then(|_| check_integrity(conn));
+    let migration_result = (|| -> Result<(), ProfileOpenError> {
+        let mut current = pragma_user_version(conn)?;
+        if current == 0 {
+            apply_v0_to_v1(conn)?;
+            current = pragma_user_version(conn)?;
+        }
+        if current == 1 {
+            apply_v1_to_v2(conn, force_failure)?;
+        }
+        if pragma_user_version(conn)? != CURRENT_SCHEMA_VERSION {
+            return Err(ProfileOpenError::InvalidSchemaMetadata);
+        }
+        check_integrity(conn)
+    })();
+
     if let Err(err) = migration_result {
         if should_backup {
             conn.restore("main", &backup, None::<fn(rusqlite::backup::Progress)>)?;
@@ -188,12 +225,16 @@ fn migrate_if_needed(
 }
 
 fn verify_migration_line(conn: &Connection) -> Result<(), ProfileOpenError> {
-    let row: (String, String) = conn.query_row(
-        "SELECT id, checksum FROM schema_migrations ORDER BY applied_at_unix_ms, id LIMIT 1",
-        [],
-        |row| Ok((row.get(0)?, row.get(1)?)),
+    let mut stmt = conn.prepare(
+        "SELECT id, checksum FROM schema_migrations ORDER BY id",
     )?;
-    if row.0 != MIGRATION_V0_TO_V1_ID || row.1 != MIGRATION_V0_TO_V1_SHA256 {
+    let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?;
+    let observed = rows.collect::<Result<Vec<_>, _>>()?;
+    let expected = vec![
+        (MIGRATION_V0_TO_V1_ID.to_owned(), MIGRATION_V0_TO_V1_SHA256.to_owned()),
+        (MIGRATION_V1_TO_V2_ID.to_owned(), MIGRATION_V1_TO_V2_SHA256.to_owned()),
+    ];
+    if observed != expected {
         return Err(ProfileOpenError::InvalidSchemaMetadata);
     }
     Ok(())
@@ -250,7 +291,7 @@ mod tests {
     fn temp_profile(name: &str) -> ProfileStoragePaths {
         let n = NEXT.fetch_add(1, Ordering::Relaxed);
         ProfileStoragePaths::new(std::env::temp_dir().join(format!(
-            "p2pkanban-a06-{name}-{}-{n}/profiles/default",
+            "p2pkanban-a07-{name}-{}-{n}/profiles/default",
             std::process::id()
         )))
     }
@@ -266,13 +307,13 @@ mod tests {
     }
 
     #[test]
-    fn new_profile_uses_v1_metadata_and_durability_pragmas() {
+    fn new_profile_reaches_current_schema_and_durability_pragmas() {
         let layout = temp_profile("pragmas");
         cleanup(&layout);
         let (conn, info) = open_profile(&layout).unwrap();
-        assert_eq!(info.schema_version, 1);
-        assert_eq!(info.min_reader, 1);
-        assert_eq!(info.min_writer, 1);
+        assert_eq!(info.schema_version, 2);
+        assert_eq!(info.min_reader, 2);
+        assert_eq!(info.min_writer, 2);
         let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |row| row.get(0)).unwrap();
         let sync: i64 = conn.query_row("PRAGMA synchronous", [], |row| row.get(0)).unwrap();
         let mode: String = conn.query_row("PRAGMA journal_mode", [], |row| row.get(0)).unwrap();
@@ -281,6 +322,36 @@ mod tests {
         assert_eq!(mode.to_ascii_lowercase(), "wal");
         assert_eq!(fs::metadata(layout.database()).unwrap().permissions().mode() & 0o777, 0o600);
         check_integrity(&conn).unwrap();
+        drop(conn);
+        cleanup(&layout);
+    }
+
+    #[test]
+    fn v1_profile_migrates_to_v2_and_preserves_workspace_board_identity() {
+        let layout = temp_profile("v1-to-v2");
+        cleanup(&layout);
+        layout.prepare().unwrap();
+        {
+            let mut conn = Connection::open(layout.database()).unwrap();
+            configure_connection(&conn, true).unwrap();
+            apply_v0_to_v1(&mut conn).unwrap();
+            conn.execute(
+                "INSERT INTO workspaces(id, access_epoch) VALUES ('workspace-a', '1')",
+                [],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO boards(id, workspace_id) VALUES ('board-a', 'workspace-a')",
+                [],
+            ).unwrap();
+        }
+        let (conn, info) = open_profile(&layout).unwrap();
+        assert_eq!(info.schema_version, 2);
+        let row: (String, String, String, String) = conn.query_row(
+            "SELECT w.id, w.title, b.id, b.title FROM workspaces w JOIN boards b ON b.workspace_id=w.id",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        ).unwrap();
+        assert_eq!(row, ("workspace-a".into(), "".into(), "board-a".into(), "".into()));
         drop(conn);
         cleanup(&layout);
     }
@@ -295,7 +366,7 @@ mod tests {
         let result = open_profile(&layout);
         assert!(matches!(
             result,
-            Err(ProfileOpenError::UnsupportedSchema { found: 99, max_writer: 1 })
+            Err(ProfileOpenError::UnsupportedSchema { found: 99, max_writer: 2 })
         ));
         cleanup(&layout);
     }

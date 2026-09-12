@@ -50,9 +50,9 @@ for rel in (
 
 migration = read("src-tauri/src/infrastructure/sqlite/migration.rs")
 for token in (
-    "CURRENT_SCHEMA_VERSION: u32 = 1",
-    "MIN_READER_SCHEMA_VERSION: u32 = 1",
-    "MIN_WRITER_SCHEMA_VERSION: u32 = 1",
+    "CURRENT_SCHEMA_VERSION: u32",
+    "MIN_READER_SCHEMA_VERSION: u32",
+    "MIN_WRITER_SCHEMA_VERSION: u32",
     "BUSY_TIMEOUT_MS: u64 = 2_500",
     '"foreign_keys", "ON"',
     '"synchronous", "FULL"',
@@ -82,7 +82,7 @@ if b"access_epoch TEXT NOT NULL" not in sql or b"logical_clock TEXT NOT NULL" no
     fail("u64 epoch/clock must not be narrowed to SQLite signed INTEGER")
 
 for test_name in (
-    "new_profile_uses_v1_metadata_and_durability_pragmas",
+    "new_profile_reaches_current_schema_and_durability_pragmas",
     "newer_writer_schema_is_refused",
     "forced_migration_failure_restores_existing_v0_profile",
 ):

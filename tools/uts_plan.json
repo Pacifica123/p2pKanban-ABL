@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A06",
-  "description": "Canonical UserTestSpace verification through A06. A06 adds final XDG profile/recovery placement plus kernel single-writer ownership and optional Unix-datagram activation routing; Cargo tests and the real-binary A06 instance probe are the host authority.",
+  "stage": "A07",
+  "description": "Canonical UserTestSpace verification through A07. A07 adds schema-v2 workspace/board durability, typed native planner IPC/UI, and a session-only SecretVault boundary; Cargo tests are the persistence/migration authority and no production secret provider is claimed.",
   "deterministic": [
     {
       "id": "a00",
@@ -113,6 +113,14 @@
         "python3",
         "-B",
         "tools/check_a06.py"
+      ]
+    },
+    {
+      "id": "a07",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a07.py"
       ]
     }
   ],
@@ -229,8 +237,10 @@
   },
   "manualEvidence": [
     "In the native window confirm: mode: desktop",
-    "In the native window confirm: p2pkanban-arch-native 0.1.0 · ok · desktop",
+    "In the native window confirm: p2pkanban-arch-native 0.1.0 \u00b7 ok \u00b7 desktop",
     "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified",
-    "With a visible primary window, optionally confirm that starting a second instance raises/focuses the existing window rather than opening another window"
+    "With a visible primary window, optionally confirm that starting a second instance raises/focuses the existing window rather than opening another window",
+    "A07 UI: create a workspace and board, close the native app, reopen it, then confirm the same workspace/board can be selected again",
+    "A07 UI: confirm vault status is session-only and durable secrets are disabled; no secret value should ever be rendered"
   ]
 }

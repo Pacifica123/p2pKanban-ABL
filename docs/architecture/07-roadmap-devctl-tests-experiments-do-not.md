@@ -35,7 +35,7 @@ Every stage should be deliverable as one or a small bounded series of devctl pat
 
 **[FACT — implementation status]** A03 and A04 are now present in the Arch-native repository. A04 provides a pure Rust reference adapter and reusable semantic scenarios; SQLite execution of those same scenarios remains the A05 gate, so this status does not claim dual-adapter persistence verification yet.
 
-**[FACT — implementation status after A06]** A05/A05b are UTS Cargo-green. A06 implements the XDG path adapter, final migration recovery-artifact placement, kernel-owned single-writer profile lock and optional runtime activation socket. Its host Cargo/real-binary instance probe remains the UTS exit evidence before A07 is considered release-grade.
+**[FACT — implementation status after A07]** A05/A05b and A06 are UTS-green. A07 adds schema v2 plus the first real durable workspace/board application flow through typed Tauri IPC and an explicit session-only `SecretVault` boundary. It does not introduce remote auth, durable secret material, card semantics or sync. A08 remains the next planner-persistence stage; production Linux secret providers remain A09.
 
 ## 3. Suggested devctl patch discipline
 

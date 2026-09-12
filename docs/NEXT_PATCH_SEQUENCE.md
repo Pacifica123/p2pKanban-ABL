@@ -1,20 +1,19 @@
 # Exact next implementation sequence
 
-A00 froze source/protocol evidence. A01 established the Tauri/React process/security shell. A02 established the explicit presentation transport seam and repeatable Git-less UTS verification. A03 established the Rust application/domain boundary. A04/A04b froze repository semantics. A05/A05b added the UTS-verified SQLite schema/migration/repository adapter.
+A00 froze source/protocol evidence. A01 established the Tauri/React process/security shell. A02 established explicit typed presentation transport and repeatable Git-less UTS verification. A03 established the Rust application/domain boundary. A04/A04b froze repository semantics. A05/A05b added the UTS-verified SQLite schema/migration/repository adapter. A06 added UTS-verified XDG placement and single-writer instance control.
 
-**A06 is now implemented at source/test level:** XDG data/config/state/cache paths follow the baseline layout; the profile database and migration recovery artifacts live under `XDG_DATA_HOME/p2pkanban/profiles/<profile>/`; app-owned directories/files are private by default; single-writer ownership uses a kernel `flock` on the profile-directory inode; optional second-instance activation uses a fixed Unix datagram under a secure `XDG_RUNTIME_DIR`; missing runtime IPC degrades routing only, not writer exclusion. The native startup path acquires instance ownership before Tauri starts.
+**A07 is now implemented at source/test level:** the default XDG profile is opened behind A06 writer ownership; schema v2 adds durable workspace/board titles with checksum-addressed migration and explicit no-downgrade reader/writer floor; `WorkspaceService` remains storage/platform independent; `SqliteWorkspaceCatalog` provides create/list/open persistence; packaged React UI exercises create workspace → create/open board through typed Tauri IPC; `SecretVault` exists before any durable auth/capability secret is introduced and the wired A07 provider is explicitly session-only.
 
-Run `python3 -B tools/uts_verify.py` in UserTestSpace (UTS). Cargo test/build remains authoritative for Rust API/compiler behavior, and the A06 post-build host probe launches the real binary twice to verify second-instance routing, no-runtime degradation and restart after primary exit. If Cargo cache preparation is missing, run once with `--allow-network` and return to offline verification afterward.
+Run `python3 -B tools/uts_verify.py` in UserTestSpace. Cargo tests are authoritative for migration + close/reopen durability, frontend build checks the rendered slice, and the existing A06 runtime probes remain active. If the direct `uuid` dependency is not yet represented in the user Cargo cache, run once with `--allow-network`; acceptance is rechecked offline afterward.
 
-The exact next architecture patch is **A07 — minimal durable auth/workspace/board slice + vault interface**.
+The exact next architecture patch is **A08 — cards/order/archive/delete/checklists durable planner slice**.
 
-A07 exit target:
+A08 exit target:
 
-- create the first real application service that opens the default XDG SQLite profile under A06 writer ownership;
-- define a vault interface before any durable refresh/device/board secret is introduced; use an in-memory/fake vault contract at this stage, not plaintext SQLite/localStorage;
-- implement minimal workspace/board create/list/open semantics through application/repository boundaries;
-- expose only typed Tauri commands through the existing A02 transport map;
-- prove create/open board survives native close/reopen fully offline;
-- keep cards/order/archive/delete/checklists for A08 and production Linux secret providers for A09.
+- connect the existing A04 card/order/tombstone semantics to the A07 opened board UI/application service;
+- persist card create/move/archive/delete and checklist basics through SQLite transactions;
+- preserve access-epoch/tombstone/version invariants and deterministic position ordering;
+- keep pending sync/outbox semantics explicit rather than pretending local commit is remote convergence;
+- extend the single canonical UTS verifier with crash/reopen and planner durability evidence.
 
-Then, in order: **A07 minimal durable auth/workspace/board slice → A08 planner feature persistence → A09 production secret persistence**.
+Then, in order: **A08 planner feature persistence → A09 production secret persistence → A10 sync-core/roaming compatibility**.

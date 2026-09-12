@@ -34,6 +34,21 @@ id_type!(BoardId, "board");
 id_type!(ColumnId, "column");
 id_type!(CardId, "card");
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceRecord {
+    pub id: WorkspaceId,
+    pub title: String,
+    pub access_epoch: AccessEpoch,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoardRecord {
+    pub id: BoardId,
+    pub workspace_id: WorkspaceId,
+    pub title: String,
+}
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AccessEpoch(u64);
 

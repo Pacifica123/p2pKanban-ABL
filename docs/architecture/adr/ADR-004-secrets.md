@@ -1,6 +1,6 @@
 # ADR-004 — Arch secret storage and at-rest claims
 
-**Status:** proposed  
+**Status:** accepted boundary; A07 session-only provider implemented, production providers remain A09  
 **Decision:** protect a random application vault root through freedesktop Secret Service when usable; otherwise require an explicit Argon2id-derived passphrase vault or session-only credentials. Encrypt typed secret records with authenticated encryption. Do not claim full planner DB encryption in v1.
 
 ## Grounds
@@ -23,3 +23,8 @@ Provider locked/disappears; lost passphrase; corrupted vault root record; same-u
 
 ## Verification
 GNOME/KDE/minimal session matrix; wrong-passphrase/corruption fail-closed tests; provider migration/restart; secret canary scan across DB/config/log/crash bundle; explicit at-rest security wording review.
+
+
+## A07 implementation note
+
+A07 establishes the `SecretVault` application interface and wires a session-only provider. This is intentionally not durable secret persistence and does not weaken the ADR: no secret put/get/delete IPC is exposed, no secret-bearing SQLite columns are introduced, and the UI receives only provider capability status. Secret Service/KWallet and the explicit passphrase fallback remain A09.

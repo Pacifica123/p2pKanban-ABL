@@ -190,8 +190,8 @@ if 'plan.get("stage") != "A05b"' in a05b or "A06 must remain the next architectu
     fail("A05b checker still freezes repository progression")
 
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A06":
-    fail("UTS plan did not advance to A06")
+if plan.get("schemaVersion") != 1:
+    fail("unsupported UTS plan schema")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 for required_id in ("a05", "a05b", "a06"):
     if required_id not in ids:
@@ -210,8 +210,8 @@ line = next((line for line in status.splitlines() if "A06 XDG adapters + multi-i
 if "**implemented" not in line or "A07" not in line:
     fail("implementation ledger did not advance A06 to implemented/A07")
 sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "exact next architecture patch is **A07" not in sequence:
-    fail("next patch sequence did not advance to A07")
+if "A07" not in sequence:
+    fail("next-patch sequence lost the A07 architecture stage")
 adr = read("docs/architecture/adr/ADR-007-profile-instance-control.md")
 evidence = read("docs/evidence/A06_XDG_INSTANCE_CONTROL.md")
 for token in ("flock", "XDG_RUNTIME_DIR", "RoutingUnavailable", "A07"):

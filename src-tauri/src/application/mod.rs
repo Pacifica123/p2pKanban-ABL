@@ -1,5 +1,7 @@
 pub mod repository;
 pub mod system;
+pub mod vault;
+pub mod workspace;
 
 use system::SystemService;
 
