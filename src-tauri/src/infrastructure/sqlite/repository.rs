@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use rusqlite::{params, Connection, OptionalExtension, Transaction, TransactionBehavior};
 
 use crate::{
@@ -12,6 +10,8 @@ use crate::{
     },
 };
 
+use crate::infrastructure::profile::ProfileStoragePaths;
+
 use super::migration::{open_profile, ProfileOpenError, ProfileSchemaInfo};
 
 pub struct SqlitePlannerRepository {
@@ -20,8 +20,8 @@ pub struct SqlitePlannerRepository {
 }
 
 impl SqlitePlannerRepository {
-    pub fn open(path: &Path) -> Result<Self, ProfileOpenError> {
-        let (connection, schema) = open_profile(path)?;
+    pub fn open(layout: &ProfileStoragePaths) -> Result<Self, ProfileOpenError> {
+        let (connection, schema) = open_profile(layout)?;
         Ok(Self { connection, schema })
     }
 
@@ -412,72 +412,76 @@ mod tests {
             },
             PlannerMutation, PlannerTransaction,
         },
-        domain::planner::{AccessEpoch, BoardId, CardId, CardLifecycle, CardRecord, ColumnId, OrderKey, WorkspaceId},
+        domain::planner::{
+            AccessEpoch, BoardId, CardId, CardLifecycle, CardRecord, ColumnId, OrderKey,
+            WorkspaceId,
+        },
     };
-    use std::{fs, path::PathBuf, sync::atomic::{AtomicU64, Ordering}};
+    use std::{fs, sync::atomic::{AtomicU64, Ordering}};
 
     static NEXT: AtomicU64 = AtomicU64::new(1);
 
-    fn temp_profile(name: &str) -> PathBuf {
+    fn temp_profile(name: &str) -> ProfileStoragePaths {
         let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        std::env::temp_dir().join(format!("p2pkanban-a05-repo-{name}-{}-{n}.sqlite", std::process::id()))
+        ProfileStoragePaths::new(std::env::temp_dir().join(format!(
+            "p2pkanban-a06-repo-{name}-{}-{n}/profiles/default",
+            std::process::id()
+        )))
     }
 
-    fn cleanup(path: &Path) {
-        for candidate in [
-            path.to_path_buf(),
-            PathBuf::from(format!("{}-wal", path.display())),
-            PathBuf::from(format!("{}-shm", path.display())),
-            path.with_file_name(format!("{}.migration-journal.json", path.file_name().unwrap().to_string_lossy())),
-            path.with_file_name(format!("{}.pre-migration-v0.sqlite", path.file_name().unwrap().to_string_lossy())),
-        ] {
-            let _ = fs::remove_file(candidate);
-        }
+    fn cleanup(layout: &ProfileStoragePaths) {
+        let root = layout
+            .root()
+            .ancestors()
+            .nth(2)
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(|| layout.root().to_path_buf());
+        let _ = fs::remove_dir_all(root);
     }
 
-    fn fixture_repo(path: &Path) -> SqlitePlannerRepository {
-        cleanup(path);
-        let mut repo = SqlitePlannerRepository::open(path).unwrap();
+    fn fixture_repo(layout: &ProfileStoragePaths) -> SqlitePlannerRepository {
+        cleanup(layout);
+        let mut repo = SqlitePlannerRepository::open(layout).unwrap();
         repo.seed_contract_scope();
         repo
     }
 
     #[test]
     fn sqlite_adapter_passes_the_same_a04_repository_contract() {
-        let path = temp_profile("contract");
-        let repo = fixture_repo(&path);
+        let layout = temp_profile("contract");
+        let repo = fixture_repo(&layout);
         assert_repository_contract(repo);
-        cleanup(&path);
+        cleanup(&layout);
     }
 
     #[test]
     fn sqlite_adapter_preserves_stale_epoch_rejection() {
-        let path = temp_profile("stale-epoch");
-        let repo = fixture_repo(&path);
+        let layout = temp_profile("stale-epoch");
+        let repo = fixture_repo(&layout);
         assert_stale_epoch_contract(repo);
-        cleanup(&path);
+        cleanup(&layout);
     }
 
     #[test]
     fn sqlite_adapter_preserves_atomic_batch_rollback() {
-        let path = temp_profile("atomic-rollback");
-        let repo = fixture_repo(&path);
+        let layout = temp_profile("atomic-rollback");
+        let repo = fixture_repo(&layout);
         assert_atomic_rollback_contract(repo);
-        cleanup(&path);
+        cleanup(&layout);
     }
 
     #[test]
     fn sqlite_adapter_preserves_reorder_semantics() {
-        let path = temp_profile("reorder");
-        let repo = fixture_repo(&path);
+        let layout = temp_profile("reorder");
+        let repo = fixture_repo(&layout);
         assert_reorder_contract(repo);
-        cleanup(&path);
+        cleanup(&layout);
     }
 
     #[test]
     fn card_survives_close_and_reopen() {
-        let path = temp_profile("reopen");
-        let mut repo = fixture_repo(&path);
+        let layout = temp_profile("reopen");
+        let mut repo = fixture_repo(&layout);
         let card_id = CardId::new("018f0000-0000-7000-8000-000000000777").unwrap();
         let card = CardRecord {
             id: card_id.clone(),
@@ -496,9 +500,9 @@ mod tests {
         .unwrap();
         drop(repo);
 
-        let reopened = SqlitePlannerRepository::open(&path).unwrap();
+        let reopened = SqlitePlannerRepository::open(&layout).unwrap();
         assert_eq!(reopened.get_card(&card_id).unwrap(), Some(card));
         drop(reopened);
-        cleanup(&path);
+        cleanup(&layout);
     }
 }

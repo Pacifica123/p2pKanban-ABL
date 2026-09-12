@@ -64,7 +64,8 @@ for token in (
     "MIGRATION_V0_TO_V1_ID",
     "MIGRATION_V0_TO_V1_SHA256",
     "schema_migrations",
-    "migration-journal.json",
+    "layout.migration_journal()",
+    "layout.migration_backup(from)",
     "restored-after-failure",
     "UnsupportedSchema",
 ):
@@ -137,10 +138,6 @@ status = read("docs/IMPLEMENTATION_STATUS.md")
 line = next((line for line in status.splitlines() if "A05 SQLite schema + atomic migration engine" in line), "")
 if "**implemented" not in line or "A06" not in line:
     fail("implementation ledger did not advance A05 to implemented/A06")
-sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "exact next architecture patch is **A06" not in sequence:
-    fail("next patch sequence did not advance to A06")
-
 doc = read("docs/evidence/A05_SQLITE_PROFILE.md")
 for token in ("Fact", "Inference", "Proposal", "Unresolved", "WAL", "FULL", "A06"):
     if token not in doc:

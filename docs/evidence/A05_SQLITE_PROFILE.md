@@ -32,11 +32,11 @@ No token, private key, board key or vault root column exists in this schema. SQL
 
 - WAL suitability on NFS/FUSE/cloud-backed paths remains an A06/A18 capability/filesystem experiment. A05 fails if WAL cannot be activated; it does not silently weaken durability semantics.
 - `synchronous=FULL` remains the initial policy; performance evidence may later justify an ADR change, not an implicit switch to NORMAL.
-- backup retention/location is temporary sidecar behavior for the migration engine. A06/A16 will place profile data/backups in the final XDG/recovery layout and define retention/doctor UX.
+- A06 supersedes the temporary A05 sidecar placement: migration backups now live under the profile `backups/` directory and the migration journal lives at the profile root. A16 still owns retention/manifest/doctor UX.
 - whole-database encryption remains an open architecture question; A05 does not claim it.
 
 ## Verification
 
 `python3 -B tools/uts_verify.py` must make `deterministic.a05`, `cargo.test`, and `cargo.build` green. The Rust tests are the authority for the actual SQLite API/compiler behavior because the patch-authoring environment may lack Cargo.
 
-The exact next architecture patch is **A06 — XDG adapters + multi-instance/locking behavior**.
+A06 now owns final XDG placement and instance lifecycle; this A05 document remains provenance for the migration semantics.

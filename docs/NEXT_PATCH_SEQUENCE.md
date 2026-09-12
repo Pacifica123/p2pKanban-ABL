@@ -1,22 +1,20 @@
 # Exact next implementation sequence
 
-A00 froze source/protocol evidence. A01 established the Tauri/React process/security shell. A02 established the explicit presentation transport seam and the repeatable Git-less UTS verifier. A03 established the Rust application/domain boundary. A04/A04b froze repository semantics and are Cargo-green in UserTestSpace.
+A00 froze source/protocol evidence. A01 established the Tauri/React process/security shell. A02 established the explicit presentation transport seam and repeatable Git-less UTS verification. A03 established the Rust application/domain boundary. A04/A04b froze repository semantics. A05/A05b added the UTS-verified SQLite schema/migration/repository adapter.
 
-**A05 is now implemented at source/test level:** an exact-pinned bundled SQLite adapter implements the existing `PlannerRepository`; schema v1 carries explicit reader/writer metadata; file-backed profiles require foreign keys, WAL, `synchronous=FULL`, and bounded busy behavior; existing v0 profiles receive a pre-migration online backup + migration journal; integrity/foreign-key checks run before activation; forced-failure tests restore the original profile. The same A04 semantic scenario suite runs against SQLite, plus a close/reopen durability scenario.
+**A06 is now implemented at source/test level:** XDG data/config/state/cache paths follow the baseline layout; the profile database and migration recovery artifacts live under `XDG_DATA_HOME/p2pkanban/profiles/<profile>/`; app-owned directories/files are private by default; single-writer ownership uses a kernel `flock` on the profile-directory inode; optional second-instance activation uses a fixed Unix datagram under a secure `XDG_RUNTIME_DIR`; missing runtime IPC degrades routing only, not writer exclusion. The native startup path acquires instance ownership before Tauri starts.
 
-Run `python3 -B tools/uts_verify.py`. If the new `rusqlite` sources are not yet present in the global Cargo cache, run the same command once with `--allow-network`, then return to the default offline command. Cargo test/build is the authority for A05 host verification.
+Run `python3 -B tools/uts_verify.py` in UserTestSpace (UTS). Cargo test/build remains authoritative for Rust API/compiler behavior, and the A06 post-build host probe launches the real binary twice to verify second-instance routing, no-runtime degradation and restart after primary exit. If Cargo cache preparation is missing, run once with `--allow-network` and return to offline verification afterward.
 
-The first A05 UTS compile exposed an API-shape defect: `rusqlite 0.40.2` no longer exports the `DatabaseName` type used by the initial adapter. **A05b** corrects backup/restore to the generic database-name API (`"main"`) without changing schema or recovery semantics. Repeat `python3 -B tools/uts_verify.py`; Cargo test/build is the authority for the correction.
+The exact next architecture patch is **A07 — minimal durable auth/workspace/board slice + vault interface**.
 
-The exact next architecture patch is **A06 — XDG adapters + multi-instance/locking behavior**.
+A07 exit target:
 
-A06 exit target:
+- create the first real application service that opens the default XDG SQLite profile under A06 writer ownership;
+- define a vault interface before any durable refresh/device/board secret is introduced; use an in-memory/fake vault contract at this stage, not plaintext SQLite/localStorage;
+- implement minimal workspace/board create/list/open semantics through application/repository boundaries;
+- expose only typed Tauri commands through the existing A02 transport map;
+- prove create/open board survives native close/reopen fully offline;
+- keep cards/order/archive/delete/checklists for A08 and production Linux secret providers for A09.
 
-- define XDG-compliant config/data/state/cache/runtime profile paths without assuming a desktop environment or systemd;
-- move A05 temporary sidecar backup/journal placement into the final per-profile layout while preserving migration atomicity;
-- introduce single-writer profile instance control with graceful stale-lock recovery while retaining SQLite locking as defense-in-depth;
-- define upgrade/uninstall data-preservation ownership and expose profile diagnostics without requiring root;
-- test concurrent launch, stale lock, missing runtime dir, read-only/unwritable paths, and reopen after abnormal termination;
-- keep Secret Service/KWallet integration for A09 and durable application auth/board UI slice for A07.
-
-Then, in order: **A06 XDG/instance control → A07 minimal durable auth/workspace/board slice → A08 planner feature persistence**.
+Then, in order: **A07 minimal durable auth/workspace/board slice → A08 planner feature persistence → A09 production secret persistence**.

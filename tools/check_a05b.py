@@ -43,8 +43,8 @@ if 'DatabaseName::Main' in a05:
     fail("A05 checker still requires the obsolete rusqlite API")
 
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A05b":
-    fail("UTS plan did not advance to A05b")
+if plan.get("schemaVersion") != 1:
+    fail("unsupported UTS plan schema")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 for required in ("a05", "a05b"):
     if required not in ids:
@@ -55,9 +55,6 @@ if ids.index("a05") >= ids.index("a05b"):
 status = read("docs/IMPLEMENTATION_STATUS.md")
 if "A05b rusqlite backup API compile correction" not in status:
     fail("implementation ledger lacks A05b correction")
-sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "exact next architecture patch is **A06" not in sequence:
-    fail("A06 must remain the next architecture patch")
 evidence = read("docs/evidence/A05B_UTS_COMPILE_FIX.md")
 for token in ("Fact", "rusqlite 0.40.2", "DatabaseName", '"main"', "UTS", "A06"):
     if token not in evidence:

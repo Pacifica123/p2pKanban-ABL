@@ -1,10 +1,13 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
+    os::unix::fs::PermissionsExt,
+    path::Path,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use rusqlite::{Connection, TransactionBehavior};
+
+use crate::infrastructure::profile::{write_private_file, ProfileStoragePaths};
 
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
 pub const MIN_READER_SCHEMA_VERSION: u32 = 1;
@@ -46,27 +49,16 @@ fn epoch_millis() -> i64 {
         .unwrap_or(0)
 }
 
-fn sidecar_path(profile: &Path, suffix: &str) -> PathBuf {
-    let name = profile
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("profile.db");
-    profile.with_file_name(format!("{name}.{suffix}"))
-}
-
-fn backup_path(profile: &Path, from_version: u32) -> PathBuf {
-    sidecar_path(profile, &format!("pre-migration-v{from_version}.sqlite"))
-}
-
-fn journal_path(profile: &Path) -> PathBuf {
-    sidecar_path(profile, "migration-journal.json")
-}
-
-fn write_journal(path: &Path, from: u32, to: u32, state: &str) -> Result<(), ProfileOpenError> {
+fn write_journal(
+    layout: &ProfileStoragePaths,
+    from: u32,
+    to: u32,
+    state: &str,
+) -> Result<(), ProfileOpenError> {
     let body = format!(
         "{{\n  \"formatVersion\": 1,\n  \"fromSchema\": {from},\n  \"toSchema\": {to},\n  \"state\": \"{state}\"\n}}\n"
     );
-    fs::write(path, body).map_err(|_| ProfileOpenError::Io)
+    write_private_file(layout.migration_journal(), body.as_bytes()).map_err(|_| ProfileOpenError::Io)
 }
 
 fn configure_connection(conn: &Connection, file_backed: bool) -> Result<(), ProfileOpenError> {
@@ -147,7 +139,7 @@ fn apply_v0_to_v1(conn: &mut Connection, force_failure: bool) -> Result<(), Prof
 
 fn migrate_if_needed(
     conn: &mut Connection,
-    profile_path: &Path,
+    layout: &ProfileStoragePaths,
     existed_before_open: bool,
     force_failure: bool,
 ) -> Result<(), ProfileOpenError> {
@@ -168,15 +160,17 @@ fn migrate_if_needed(
         });
     }
 
-    let journal = journal_path(profile_path);
-    let backup = backup_path(profile_path, from);
+    let journal = layout.migration_journal();
+    let backup = layout.migration_backup(from);
     let should_backup = existed_before_open;
     if should_backup {
         let _ = fs::remove_file(&backup);
         conn.backup("main", &backup, None)?;
+        fs::set_permissions(&backup, fs::Permissions::from_mode(0o600))
+            .map_err(|_| ProfileOpenError::Io)?;
         backup_is_valid(&backup)?;
     }
-    write_journal(&journal, from, CURRENT_SCHEMA_VERSION, "prepared")?;
+    write_journal(layout, from, CURRENT_SCHEMA_VERSION, "prepared")?;
 
     let migration_result = apply_v0_to_v1(conn, force_failure).and_then(|_| check_integrity(conn));
     if let Err(err) = migration_result {
@@ -184,12 +178,12 @@ fn migrate_if_needed(
             conn.restore("main", &backup, None::<fn(rusqlite::backup::Progress)>)?;
             backup_is_valid(&backup)?;
         }
-        write_journal(&journal, from, CURRENT_SCHEMA_VERSION, "restored-after-failure")?;
+        write_journal(layout, from, CURRENT_SCHEMA_VERSION, "restored-after-failure")?;
         return Err(err);
     }
 
-    write_journal(&journal, from, CURRENT_SCHEMA_VERSION, "completed")?;
-    let _ = fs::remove_file(&journal);
+    write_journal(layout, from, CURRENT_SCHEMA_VERSION, "completed")?;
+    let _ = fs::remove_file(journal);
     Ok(())
 }
 
@@ -205,14 +199,17 @@ fn verify_migration_line(conn: &Connection) -> Result<(), ProfileOpenError> {
     Ok(())
 }
 
-pub(crate) fn open_profile(path: &Path) -> Result<(Connection, ProfileSchemaInfo), ProfileOpenError> {
-    let existed_before_open = path.exists();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|_| ProfileOpenError::Io)?;
-    }
-    let mut conn = Connection::open(path)?;
+pub(crate) fn open_profile(
+    layout: &ProfileStoragePaths,
+) -> Result<(Connection, ProfileSchemaInfo), ProfileOpenError> {
+    layout.prepare().map_err(|_| ProfileOpenError::Io)?;
+    let existed_before_open = layout.database().exists();
+    let mut conn = Connection::open(layout.database())?;
+    layout
+        .enforce_database_permissions()
+        .map_err(|_| ProfileOpenError::Io)?;
     configure_connection(&conn, true)?;
-    migrate_if_needed(&mut conn, path, existed_before_open, false)?;
+    migrate_if_needed(&mut conn, layout, existed_before_open, false)?;
     let info = schema_info(&conn)?;
     verify_migration_line(&conn)?;
     if info.schema_version != CURRENT_SCHEMA_VERSION
@@ -230,44 +227,49 @@ pub(crate) fn open_profile(path: &Path) -> Result<(Connection, ProfileSchemaInfo
 
 #[cfg(test)]
 pub(crate) fn open_profile_with_forced_migration_failure(
-    path: &Path,
+    layout: &ProfileStoragePaths,
 ) -> Result<(), ProfileOpenError> {
-    let existed_before_open = path.exists();
-    let mut conn = Connection::open(path)?;
+    layout.prepare().map_err(|_| ProfileOpenError::Io)?;
+    let existed_before_open = layout.database().exists();
+    let mut conn = Connection::open(layout.database())?;
+    layout
+        .enforce_database_permissions()
+        .map_err(|_| ProfileOpenError::Io)?;
     configure_connection(&conn, true)?;
-    migrate_if_needed(&mut conn, path, existed_before_open, true)?;
+    migrate_if_needed(&mut conn, layout, existed_before_open, true)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::{path::PathBuf, sync::atomic::{AtomicU64, Ordering}};
 
     static NEXT: AtomicU64 = AtomicU64::new(1);
 
-    fn temp_profile(name: &str) -> PathBuf {
+    fn temp_profile(name: &str) -> ProfileStoragePaths {
         let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        std::env::temp_dir().join(format!("p2pkanban-a05-{name}-{}-{n}.sqlite", std::process::id()))
+        ProfileStoragePaths::new(std::env::temp_dir().join(format!(
+            "p2pkanban-a06-{name}-{}-{n}/profiles/default",
+            std::process::id()
+        )))
     }
 
-    fn cleanup(path: &Path) {
-        for candidate in [
-            path.to_path_buf(),
-            sidecar_path(path, "pre-migration-v0.sqlite"),
-            sidecar_path(path, "migration-journal.json"),
-            PathBuf::from(format!("{}-wal", path.display())),
-            PathBuf::from(format!("{}-shm", path.display())),
-        ] {
-            let _ = fs::remove_file(candidate);
-        }
+    fn cleanup(layout: &ProfileStoragePaths) {
+        let root = layout
+            .root()
+            .ancestors()
+            .nth(2)
+            .map(PathBuf::from)
+            .unwrap_or_else(|| layout.root().to_path_buf());
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]
     fn new_profile_uses_v1_metadata_and_durability_pragmas() {
-        let path = temp_profile("pragmas");
-        cleanup(&path);
-        let (conn, info) = open_profile(&path).unwrap();
+        let layout = temp_profile("pragmas");
+        cleanup(&layout);
+        let (conn, info) = open_profile(&layout).unwrap();
         assert_eq!(info.schema_version, 1);
         assert_eq!(info.min_reader, 1);
         assert_eq!(info.min_writer, 1);
@@ -277,51 +279,60 @@ mod tests {
         assert_eq!(fk, 1);
         assert_eq!(sync, 2);
         assert_eq!(mode.to_ascii_lowercase(), "wal");
+        assert_eq!(fs::metadata(layout.database()).unwrap().permissions().mode() & 0o777, 0o600);
         check_integrity(&conn).unwrap();
         drop(conn);
-        cleanup(&path);
+        cleanup(&layout);
     }
 
     #[test]
     fn newer_writer_schema_is_refused() {
-        let path = temp_profile("future");
-        cleanup(&path);
-        let (conn, _) = open_profile(&path).unwrap();
+        let layout = temp_profile("future");
+        cleanup(&layout);
+        let (conn, _) = open_profile(&layout).unwrap();
         conn.pragma_update(None, "user_version", 99).unwrap();
         drop(conn);
-        let result = open_profile(&path);
+        let result = open_profile(&layout);
         assert!(matches!(
             result,
             Err(ProfileOpenError::UnsupportedSchema { found: 99, max_writer: 1 })
         ));
-        cleanup(&path);
+        cleanup(&layout);
     }
 
     #[test]
     fn forced_migration_failure_restores_existing_v0_profile() {
-        let path = temp_profile("restore");
-        cleanup(&path);
+        let layout = temp_profile("restore");
+        cleanup(&layout);
+        layout.prepare().unwrap();
         {
-            let conn = Connection::open(&path).unwrap();
+            let conn = Connection::open(layout.database()).unwrap();
             conn.execute_batch(
                 "CREATE TABLE legacy_marker(value TEXT NOT NULL);\nINSERT INTO legacy_marker(value) VALUES ('keep-me');\nPRAGMA user_version=0;",
             )
             .unwrap();
         }
         assert_eq!(
-            open_profile_with_forced_migration_failure(&path),
+            open_profile_with_forced_migration_failure(&layout),
             Err(ProfileOpenError::MigrationRecovered)
         );
-        let conn = Connection::open(&path).unwrap();
+        let conn = Connection::open(layout.database()).unwrap();
         let marker: String = conn
             .query_row("SELECT value FROM legacy_marker", [], |row| row.get(0))
             .unwrap();
         assert_eq!(marker, "keep-me");
         assert_eq!(pragma_user_version(&conn).unwrap(), 0);
         drop(conn);
-        assert!(sidecar_path(&path, "pre-migration-v0.sqlite").is_file());
-        let journal = fs::read_to_string(sidecar_path(&path, "migration-journal.json")).unwrap();
+        assert!(layout.migration_backup(0).is_file());
+        let journal = fs::read_to_string(layout.migration_journal()).unwrap();
         assert!(journal.contains("restored-after-failure"));
-        cleanup(&path);
+        cleanup(&layout);
+    }
+
+    #[test]
+    fn migration_artifacts_use_final_profile_recovery_layout() {
+        let layout = temp_profile("layout");
+        assert!(layout.migration_backup(0).ends_with("backups/pre-migration-v0.sqlite"));
+        assert!(layout.migration_journal().ends_with("migration-journal.json"));
     }
 }

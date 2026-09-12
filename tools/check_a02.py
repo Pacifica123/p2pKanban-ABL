@@ -43,7 +43,7 @@ if "apiRequest<BackendVersion>('/health')" not in version: fail("web-compatible 
 rust = read("src-tauri/src/desktop_api.rs")
 main = read("src-tauri/src/main.rs")
 if "#[tauri::command]" not in rust or "desktop_api_health" not in rust: fail("Rust command missing")
-if "generate_handler![desktop_api::desktop_api_health]" not in main: fail("Rust command is not explicitly allowlisted")
+if "generate_handler![" not in main or "desktop_api::desktop_api_health" not in main: fail("Rust health command is not explicitly allowlisted")
 for forbidden in ("TcpListener", "std::process::Command", "std::fs", "reqwest", "axum", "sqlx"):
     if forbidden in rust: fail("A02 probe command gained forbidden capability: " + forbidden)
 

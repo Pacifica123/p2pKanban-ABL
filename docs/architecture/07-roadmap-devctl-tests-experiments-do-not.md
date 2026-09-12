@@ -35,6 +35,8 @@ Every stage should be deliverable as one or a small bounded series of devctl pat
 
 **[FACT — implementation status]** A03 and A04 are now present in the Arch-native repository. A04 provides a pure Rust reference adapter and reusable semantic scenarios; SQLite execution of those same scenarios remains the A05 gate, so this status does not claim dual-adapter persistence verification yet.
 
+**[FACT — implementation status after A06]** A05/A05b are UTS Cargo-green. A06 implements the XDG path adapter, final migration recovery-artifact placement, kernel-owned single-writer profile lock and optional runtime activation socket. Its host Cargo/real-binary instance probe remains the UTS exit evidence before A07 is considered release-grade.
+
 ## 3. Suggested devctl patch discipline
 
 The provided devctl is v0.7.0 and already gives a suitable safety conveyor: validated manifest/safe paths, pre snapshot, declared checks, commit/push policy from workspace, failed archive/reset and UserTestSpace.

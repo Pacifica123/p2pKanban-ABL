@@ -257,6 +257,15 @@ def main() -> int:
         results.append(synthetic("cargo.test", "BLOCKED", "Cargo lock/cache preparation unavailable"))
         results.append(synthetic("cargo.build", "BLOCKED", "Cargo lock/cache preparation unavailable"))
 
+    for probe in host.get("postBuildProbes", []):
+        step_id = "host." + probe["id"]
+        if build_ok:
+            result = run_command(step_id, expand(probe["command"], report_dir), report_dir)
+            results.append(result)
+            print(f"[{result.status}] {result.id}")
+        else:
+            results.append(synthetic(step_id, "BLOCKED", "native binary was not built successfully"))
+
     if args.no_runtime:
         results.append(synthetic("runtime.launch-probe", "SKIP", "disabled by --no-runtime"))
     elif build_ok:

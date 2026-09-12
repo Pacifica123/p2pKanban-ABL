@@ -25,7 +25,7 @@ Deterministic checks do not claim Rust compilation. In UTS, `python3 -B tools/ut
 
 ## Proposal / next stage
 
-A05b is a compile correction only. The exact next architecture patch remains **A06 — XDG adapters + multi-instance/locking behavior**.
+A05b is a compile correction only. A06 subsequently owns XDG layout and instance control without changing the corrected rusqlite API.
 
 ## Unresolved
 

@@ -90,7 +90,8 @@ for token in (
     "mod application;",
     "mod domain;",
     ".manage(application::ApplicationServices::desktop())",
-    "generate_handler![desktop_api::desktop_api_health]",
+    "generate_handler![",
+    "desktop_api::desktop_api_health",
 ):
     if token not in main:
         fail("native composition root missing " + token)

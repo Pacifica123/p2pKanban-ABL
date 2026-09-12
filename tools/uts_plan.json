@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A05b",
-  "description": "Canonical UserTestSpace verification plan through A05b. A05b corrects the rusqlite 0.40.2 backup/restore database-name API discovered by the first A05 Cargo compile; Cargo test/build remains the authoritative host verification for the SQLite adapter and migration restore path.",
+  "stage": "A06",
+  "description": "Canonical UserTestSpace verification through A06. A06 adds final XDG profile/recovery placement plus kernel single-writer ownership and optional Unix-datagram activation routing; Cargo tests and the real-binary A06 instance probe are the host authority.",
   "deterministic": [
     {
       "id": "a00",
@@ -106,6 +106,14 @@
         "-B",
         "tools/check_a05b.py"
       ]
+    },
+    {
+      "id": "a06",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a06.py"
+      ]
     }
   ],
   "frontend": {
@@ -207,11 +215,22 @@
       "8",
       "--report",
       "{report_dir}/a01c-runtime.json"
+    ],
+    "postBuildProbes": [
+      {
+        "id": "a06-instance",
+        "command": [
+          "python3",
+          "-B",
+          "tools/a06_host_instance_probe.py"
+        ]
+      }
     ]
   },
   "manualEvidence": [
     "In the native window confirm: mode: desktop",
     "In the native window confirm: p2pkanban-arch-native 0.1.0 · ok · desktop",
-    "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified"
+    "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified",
+    "With a visible primary window, optionally confirm that starting a second instance raises/focuses the existing window rather than opening another window"
   ]
 }
