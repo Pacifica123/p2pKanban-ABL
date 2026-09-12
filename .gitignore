@@ -1,0 +1,36 @@
+# Rust / Tauri build output
+/target/
+
+# Frontend dependencies and generated bundles
+/node_modules/
+/dist/
+/coverage/
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Native runtime/profile data must never be committed
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+/runtime/
+/.local-state/
+
+# Python/tooling cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editor/OS noise
+.DS_Store
+.idea/
+.vscode/
