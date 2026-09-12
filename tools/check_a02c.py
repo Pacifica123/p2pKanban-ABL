@@ -52,11 +52,11 @@ for forbidden in ("git clean", "shutil.rmtree", "rm -rf"):
         fail("UTS verifier must preserve useful build caches: " + forbidden)
 
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("stage") != "A02c":
-    fail("UTS plan stage must advance to A02c")
+if plan.get("schemaVersion") != 1:
+    fail("UTS plan schema mismatch")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
-if ids[-1:] != ["a02c"]:
-    fail("A02c deterministic gate must be appended to the canonical plan")
+if "a02c" not in ids:
+    fail("canonical UTS plan lost the A02c regression gate")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
 if "A02c" not in status or "repeat" not in status.lower():

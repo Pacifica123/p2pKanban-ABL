@@ -12,6 +12,8 @@ python3 -B tools/uts_verify.py
 
 The verifier is **network-free by default**. It runs every deterministic Axx gate, host doctors, cached frontend preparation/build, Cargo lock/fetch/test/build, and (when the native binary builds) the Linux runtime probe. It then reruns the deterministic gates **after** those generated artifacts exist, proving repeatability without deleting useful caches. It continues through independent checks and writes all results under:
 
+A devctl UserTestSpace project is a **fresh project-local** snapshot and intentionally does not contain `.git`. Deterministic gates therefore support both a normal Git workspace and this Git-less snapshot form. Project-local `node_modules`, `dist`, and `src-tauri/target` do not automatically carry from one UTS directory to the next. **global npm/Cargo caches** live outside the UTS project and may persist, so a fresh UTS can still pass offline dependency preparation after those user-level caches have been populated previously.
+
 ```text
 .uts-reports/<UTC timestamp>/
 ├── summary.txt
@@ -37,7 +39,7 @@ python3 -B tools/uts_verify.py --no-runtime
 
 That is not runtime evidence; the summary records the runtime probe as skipped.
 
-## Current A02c manual evidence
+## Current A02d manual evidence
 
 After a successful automatic run, keep the native window open long enough to confirm:
 

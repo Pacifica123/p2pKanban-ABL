@@ -1,8 +1,8 @@
 # Exact next implementation sequence
 
-A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary and host probes. A02 established the typed presentation transport seam. A02b fixed the first real UTS native-build defect and introduced the canonical verifier. The post-A02b UTS run then passed frontend/Cargo/native runtime probing and exposed deterministic-check repeatability defects on the immediate second run. **A02c** corrects those gates to validate Git-tracked repository content and reruns them after build/runtime work in the same verifier invocation.
+A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary and host probes. A02 established the typed presentation transport seam. A02b fixed the first real UTS native-build defect and introduced the canonical verifier. A02c fixed repeatability defects caused by generated build state. The next fresh UTS run proved one more verifier assumption false: devctl UserTestSpace projects are Git-less snapshots, so `git ls-files` cannot be mandatory. **A02d** adds an explicit Git/snapshot repository-view fallback and records the distinction between fresh project-local build trees and persistent user-level package caches.
 
-A new compiler/runtime or post-build deterministic failure in UserTestSpace is evidence and re-opens the affected stage; it is not a reason to hide or weaken the gate. Host-dependent evidence may remain verification-pending without blocking unrelated source-stage work under DELIVERY-A01-003.
+A new compiler/runtime or deterministic failure in UserTestSpace is evidence and re-opens the affected stage; it is not a reason to hide or weaken the gate. Host-dependent evidence may remain verification-pending without blocking unrelated source-stage work under DELIVERY-A01-003.
 
 The exact next architecture patch is **A03 — Rust application/domain boundary**.
 
