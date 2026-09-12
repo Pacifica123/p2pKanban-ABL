@@ -1,17 +1,20 @@
 # Exact next implementation sequence
 
-A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary and host probes. A02 established the typed presentation transport seam. A02b fixed the first real UTS native-build defect and introduced the canonical verifier. A02c fixed repeatability defects caused by generated build state. The next fresh UTS run proved one more verifier assumption false: devctl UserTestSpace projects are Git-less snapshots, so `git ls-files` cannot be mandatory. **A02d** adds an explicit Git/snapshot repository-view fallback and records the distinction between fresh project-local build trees and persistent user-level package caches.
+A00 froze source/protocol evidence. A01 established the Tauri/React process and security shell. A02 established the explicit presentation transport seam, and A02b–A02d incorporated real Manjaro UserTestSpace build/runtime evidence and fixed the canonical verifier for repeatable Git-less snapshots.
 
-A new compiler/runtime or deterministic failure in UserTestSpace is evidence and re-opens the affected stage; it is not a reason to hide or weaken the gate. Host-dependent evidence may remain verification-pending without blocking unrelated source-stage work under DELIVERY-A01-003.
+**A03 is now implemented:** the health path terminates at a thin Tauri adapter backed by transport-agnostic Rust `ApplicationServices`/`SystemService` and platform-independent core values. No SQL, HTTP, filesystem, process or network dependency is allowed inside `application/` or `domain/`. This is intentionally a boundary patch, not a persistence port.
 
-The exact next architecture patch is **A03 — Rust application/domain boundary**.
+Host-dependent compilation/runtime evidence remains driven by the single canonical command `python3 -B tools/uts_verify.py`; lack of a particular tool in another execution environment does not justify weakening deterministic source contracts.
 
-A03 exit target:
+The exact next architecture patch is **A04 — repository semantic contract suite**.
 
-- introduce an application service module independent of Tauri/Axum/SQL;
-- move `desktop_api_health` behind that application boundary as the first end-to-end example;
-- define command DTO/error mapping conventions without importing PostgreSQL/SQLite concerns;
-- add deterministic tests proving application APIs contain no `sqlx::Pg*`, HTTP, Tauri or filesystem/network dependencies;
-- append A03 checks to `tools/uts_plan.json` rather than creating a new manual UTS command list.
+A04 exit target:
 
-Then, in order: **A03 application/domain boundary → A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.
+- derive repository/use-case semantics from the frozen web + Android evidence rather than SQL syntax;
+- define storage-independent contracts for the minimum board/workspace behavior needed by A07/A08;
+- encode CRUD/order/tombstone/capability/transaction expectations as executable fake/in-memory contract tests where evidence already supports them;
+- keep PostgreSQL-specific rows/queries and future SQLite details outside application/domain APIs;
+- explicitly classify unresolved semantics instead of guessing them;
+- append A04 to `tools/uts_plan.json`; the UTS entry command remains unchanged.
+
+Then, in order: **A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.

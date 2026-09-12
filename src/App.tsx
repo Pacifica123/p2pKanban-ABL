@@ -7,6 +7,7 @@ const boundaries = [
   'Packaged React/Vite assets',
   'System WebKitGTK renderer',
   'Typed allowlisted Tauri IPC',
+  'Rust application/domain services independent of Tauri and SQL',
   'No localhost backend or WebView fs/process/network privilege',
 ] as const;
 
@@ -23,10 +24,10 @@ export default function App() {
   return (
     <main className="shell" aria-labelledby="app-title">
       <section className="hero">
-        <p className="eyebrow">ARCH NATIVE · A02 TRANSPORT</p>
+        <p className="eyebrow">ARCH NATIVE · A03 APPLICATION BOUNDARY</p>
         <h1 id="app-title">p2pKanban</h1>
         <p className="lede">
-          The presentation now talks through an explicit transport facade. Desktop routes are mapped to named Rust commands rather than a localhost HTTP server.
+          The desktop transport now terminates at a thin Tauri adapter backed by transport-agnostic Rust application/domain services.
         </p>
       </section>
 
@@ -44,8 +45,8 @@ export default function App() {
       </section>
 
       <footer>
-        <span>A02 typed transport seam</span>
-        <span>Next: A03 Rust application/domain boundary</span>
+        <span>A03 Rust application/domain boundary</span>
+        <span>Next: A04 repository semantic contracts</span>
       </footer>
     </main>
   );

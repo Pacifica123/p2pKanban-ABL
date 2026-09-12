@@ -49,8 +49,8 @@ status = read("docs/IMPLEMENTATION_STATUS.md")
 if "A01a+A01b+A01c" not in status or "partially implemented" not in status:
     fail("implementation ledger must retain honest A01c partial status")
 next_doc = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A03 — Rust application/domain boundary" not in next_doc or "UserTestSpace" not in next_doc:
-    fail("post-A02 SSOT must delegate host verification and advance to A03")
+if "A03" not in next_doc or "UserTestSpace" not in next_doc:
+    fail("post-A02 SSOT must retain A03 history and delegate host verification")
 
 # A01c must not fabricate generated evidence it could not execute.
 if (ROOT / "src-tauri/Cargo.lock").exists():

@@ -1,4 +1,6 @@
+mod application;
 mod desktop_api;
+mod domain;
 mod navigation_policy;
 
 use tauri::{
@@ -8,6 +10,7 @@ use tauri::{
 
 fn main() {
     tauri::Builder::default()
+        .manage(application::ApplicationServices::desktop())
         .invoke_handler(tauri::generate_handler![desktop_api::desktop_api_health])
         .setup(|app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
