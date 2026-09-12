@@ -39,3 +39,7 @@ A01 is **not complete** until a provisioned Arch-family build host performs all 
 7. record WebKitGTK/GTK/glibc versions and session type as environment evidence, without promoting that single host to the full Wayland/X11 compatibility claim.
 
 These are A01b acceptance tasks, not hidden green checks in A01a.
+
+## A01b follow-up
+
+A01b adds `tools/a01b_host_acceptance.py` and `docs/evidence/A01B_BUILD_ACCEPTANCE.md`. It does not retroactively convert the A01a source foundation into compiled evidence. The remaining resolver/build/launch proof is explicitly A01c.

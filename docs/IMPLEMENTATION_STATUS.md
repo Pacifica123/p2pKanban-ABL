@@ -6,9 +6,9 @@ This ledger is normative for claims about the Arch-native repository. `implement
 |---|---|---|---|
 | DEBT-A00-001 devctl commitless-repo rollback limitation | `docs/architecture/08-implementation-corrections-and-debt.md`; seeded-repo rollback validation | **planned tooling fix / operationally mitigated** | devctl future |
 | A00 evidence baseline + protocol fixtures | `docs/architecture/**`, `docs/evidence/A00_EVIDENCE_BASELINE.md`, `evidence/**`, `fixtures/**`, `tools/check_a00.py` | **implemented** | A01 |
-| ADR-001 Tauri 2 single user-session process model, no default listener/service | `src-tauri/**`, `docs/evidence/A01_SHELL_FOUNDATION.md`, `tools/check_a01.py` | **partially implemented (A01a source/security boundary; build/launch evidence pending)** | A01b |
-| A01 Tauri 2 shell + packaged React/Vite asset | `package*.json`, `src/**`, `src-tauri/**`, `tools/check_a01.py`, `docs/evidence/A01_SHELL_FOUNDATION.md` | **partially implemented (A01a); no compiled-runtime claim yet** | A01b |
-| A02 explicit web↔desktop frontend transport adapter | none yet | **planned; blocked until A01b exit evidence** | A02 |
+| ADR-001 Tauri 2 single user-session process model, no default listener/service | `src-tauri/**`, `docs/evidence/A01_SHELL_FOUNDATION.md`, `docs/evidence/A01B_BUILD_ACCEPTANCE.md`, `tools/check_a01.py`, `tools/check_a01b.py`, `tools/a01b_host_acceptance.py` | **partially implemented (A01a+A01b harness; resolver/build/launch evidence pending)** | A01c |
+| A01 Tauri 2 shell + packaged React/Vite asset | `package*.json`, `src/**`, `src-tauri/**`, `tools/check_a01.py`, `tools/check_a01b.py`, `tools/a01b_host_acceptance.py`, `docs/evidence/A01*.md` | **partially implemented (A01a+A01b harness); no compiled-runtime claim yet** | A01c |
+| A02 explicit web↔desktop frontend transport adapter | none yet | **planned; blocked until A01c exit evidence** | A02 |
 | A03 Rust application/domain boundary free of `sqlx::Pg*` APIs | none yet | **planned** | A03 |
 | A04 repository semantic contract suite | frozen source/fixture evidence only | **planned** | A04 |
 | ADR-002 SQLite embedded profile store | architecture only; no DB file/schema exists | **planned** | A05 |
@@ -32,6 +32,6 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | A18 performance/power/rolling-release hardening | no measurements yet | **experiment-needed** | A18 |
 | A19 Iroh / Arch ARM evidence track | no promotion evidence | **experiment-needed** | A19 |
 
-## Explicit non-claims after A01a
+## Explicit non-claims after A01b
 
-A Tauri/React shell **source foundation** now exists, but A01 has not yet earned a compiled/launchable-runtime claim because this patch-construction runner cannot resolve/build Rust dependencies offline. There is still no application/domain transport, SQLite profile, XDG runtime, secret vault, Linux package, sync transport or durable offline user workflow. Those become real only when their stage changes status with corresponding code and checks.
+A Tauri/React shell **source foundation plus strict offline host-acceptance harness** now exists, but A01 has not yet earned a compiled/launchable-runtime claim because the A01b construction runner has neither Cargo/rustc nor the WebKitGTK development stack and cannot resolve external registries. There is still no application/domain transport, SQLite profile, XDG runtime, secret vault, Linux package, sync transport or durable offline user workflow. Those become real only when their stage changes status with corresponding code and checks.

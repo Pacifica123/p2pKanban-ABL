@@ -23,3 +23,13 @@ The sentinel is deliberately more specific than `README.md`: devctl Patch Intake
 ### Why this is not hidden in `.devctl`
 
 The patch must not change workspace policy or devctl itself. Therefore A00 records the limitation in the repository SSOT and tests rollback against a seeded repository. A future devctl release may remove this precondition by handling an unborn branch explicitly; when that happens this debt can be closed without changing the desktop runtime architecture.
+
+## DEBT-A01-001 — A01 build evidence requires a provisioned Linux host; generic devctl application must remain offline-safe
+
+**Classification:** [FACT] from the A01b construction environment and upstream Tauri Linux prerequisites.  
+**Architecture impact:** validation/environment only; ADR-001 remains unchanged.  
+**Status:** open acceptance evidence, bounded to A01c.
+
+The patch-construction environment does not contain Cargo/rustc or WebKitGTK development metadata and cannot reach external package/registry endpoints. Installing a hidden toolchain during `devctl start`, weakening checks to a source grep, or fabricating `Cargo.lock` would all violate the repository's evidence rules and unstable-network constraint.
+
+A01b therefore adds a fail-closed offline host harness. Dependency/cache population is an explicit build-time preparation activity outside `devctl start`; normal deterministic patch checks remain network-free. A01c must execute the strict harness and real WebView runtime probes on a provisioned Arch-family host before A01 can become `implemented`.

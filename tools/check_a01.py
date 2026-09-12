@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline deterministic A01a source/security contract check."""
+"""Offline deterministic A01 source/security contract check."""
 
 from __future__ import annotations
 
@@ -197,11 +197,11 @@ for pattern in ("*.sqlite", "*.sqlite3", "*.db", "*.db-wal", "*.db-shm", "*.pem"
         fail(f"runtime/secret artifact present: {pattern}")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "partially implemented (A01a" not in status or "A01b" not in status:
-    fail("implementation ledger must report A01a honestly and point to A01b")
+if "partially implemented (A01a+A01b harness" not in status or "A01c" not in status:
+    fail("implementation ledger must report A01a+A01b harness honestly and point to A01c")
 next_doc = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A01b — locked offline build + Arch launch/security evidence" not in next_doc:
-    fail("next-patch SSOT is not A01b")
+if "A01c — resolver lock + Arch host build/launch evidence" not in next_doc:
+    fail("next-patch SSOT is not A01c")
 
 print("A01 source/security contract: OK")
-print("NOTE: compile/launch evidence is intentionally NOT claimed by A01a; see docs/evidence/A01_SHELL_FOUNDATION.md")
+print("NOTE: compile/launch evidence is intentionally NOT claimed yet; see docs/evidence/A01B_BUILD_ACCEPTANCE.md")

@@ -1,22 +1,19 @@
 # Exact next implementation sequence
 
-A01 is being delivered as a bounded two-patch stage rather than faking build evidence. **A01a — shell source/security foundation** is present after the current patch.
+A01a established the permanent Tauri/React shell source/security boundary. A01b adds the strict, fail-closed offline build and Arch host acceptance harness without fabricating unavailable compile evidence.
 
-The exact next patch is **A01b — locked offline build + Arch launch/security evidence**.
+The exact next patch is **A01c — resolver lock + Arch host build/launch evidence**.
 
-A01b exit target:
+A01c exit target:
 
-- review and commit a resolver-generated `src-tauri/Cargo.lock` for the exact Tauri dependency set;
-- `npm ci --offline` from an approved local cache/mirror, then real frontend typecheck/build;
-- `cargo test --locked --offline` and `cargo build --locked --offline` from an approved Cargo cache/vendor source;
-- packaged React/Vite assets are embedded/available to the Tauri binary;
-- built application launches with external network unavailable;
-- hostile HTTP/HTTPS/file/data/javascript top-level navigation and `window.open` are denied;
-- normal runtime has no Docker/PostgreSQL/Node requirement, localhost listener or mandatory system/user service;
-- record Arch-family WebKitGTK/GTK/glibc/session evidence separately from deterministic source gates.
+- generate and review `src-tauri/Cargo.lock` with Cargo for the exact pinned Tauri dependency set;
+- prepare approved npm/Cargo caches as a separate build-time step, then disconnect external network;
+- pass `python3 -B tools/a01b_host_acceptance.py offline-build`;
+- launch the built binary from packaged React/Vite assets;
+- verify real WebView denial of hostile HTTP/HTTPS/file/data/javascript navigation, `window.open`, and downloads;
+- verify runtime has no Docker/PostgreSQL/Node requirement, listener, root requirement, or mandatory system/user service;
+- record Arch-family WebKitGTK/GTK/GLib/session evidence without claiming the full Wayland/X11 matrix.
 
-Only after A01b is green does the architecture advance to **A02 — explicit web↔desktop frontend transport adapter**.
+Only after A01c is green may A01 be marked **implemented** and the architecture advance to **A02 — explicit web↔desktop frontend transport adapter**.
 
 Then, in order: **A02 transport adapter → A03 application/domain boundary → A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.
-
-Do not combine A03–A07 merely to demonstrate a board early; that would erase the repository and migration rollback boundaries the architecture was designed to preserve.
