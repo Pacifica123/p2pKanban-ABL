@@ -164,6 +164,8 @@ flowchart LR
 
 The extraction must happen before bulk SQLite work. A repository interface is accepted only when the same logical scenarios can execute against legacy PostgreSQL and desktop SQLite without leaking `sqlx::Pg*`, PostgreSQL JSON operators or lock syntax into domain code.
 
+**[FACT — A04 implementation]** The native repository now contains a storage-independent `PlannerRepository`/`PlannerTransaction` boundary plus executable reference contract scenarios for card CRUD/order/archive/delete+tombstone, exact access-epoch rejection, scoped reorder and transaction rollback. It intentionally contains no SQL adapter. A05 must execute the same scenario suite against SQLite before this extraction is considered proven for the desktop persistence adapter. The exact position-allocation gap is not a contract because the supplied web and Android implementations differ (1024 vs 1000).
+
 ## 6A. Existing component reuse/deprecation map
 
 | Existing component | Arch desktop action | Why / boundary |

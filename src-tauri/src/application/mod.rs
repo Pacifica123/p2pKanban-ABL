@@ -1,3 +1,4 @@
+pub mod repository;
 pub mod system;
 
 use system::SystemService;

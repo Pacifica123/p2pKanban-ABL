@@ -6,15 +6,17 @@ A00 froze source/protocol evidence. A01 established the Tauri/React process and 
 
 Host-dependent compilation/runtime evidence remains driven by the single canonical command `python3 -B tools/uts_verify.py`; lack of a particular tool in another execution environment does not justify weakening deterministic source contracts.
 
-The exact next architecture patch is **A04 — repository semantic contract suite**.
+**A04 is now implemented:** source archaeology from the frozen web/backend + Android snapshots is encoded in `evidence/a04-repository-semantics.json`, and `PlannerRepository`/`PlannerTransaction` plus the reusable Rust contract scenarios freeze CRUD/order/tombstone/access-epoch/atomicity semantics without SQL or Tauri leakage. The position-allocation gap remains deliberately unfrozen because web uses 1024 while Android optimistic state uses 1000.
 
-A04 exit target:
+The exact next architecture patch is **A05 — SQLite profile schema + atomic migration engine**.
 
-- derive repository/use-case semantics from the frozen web + Android evidence rather than SQL syntax;
-- define storage-independent contracts for the minimum board/workspace behavior needed by A07/A08;
-- encode CRUD/order/tombstone/capability/transaction expectations as executable fake/in-memory contract tests where evidence already supports them;
-- keep PostgreSQL-specific rows/queries and future SQLite details outside application/domain APIs;
-- explicitly classify unresolved semantics instead of guessing them;
-- append A04 to `tools/uts_plan.json`; the UTS entry command remains unchanged.
+A05 exit target:
 
-Then, in order: **A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.
+- add the embedded SQLite adapter without changing A04 application/domain contracts;
+- run the same A04 repository scenario suite against a temporary SQLite profile;
+- introduce schema metadata, foreign keys, WAL/FULL policy and bounded busy behavior where supported;
+- implement atomic migration/journal/backup-integrity behavior before writable activation;
+- keep XDG path ownership and multi-instance policy for A06 rather than hard-coding `$HOME` paths into SQLite code;
+- add persistence/reopen and migration interruption/integrity tests to the canonical UTS plan.
+
+Then, in order: **A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.

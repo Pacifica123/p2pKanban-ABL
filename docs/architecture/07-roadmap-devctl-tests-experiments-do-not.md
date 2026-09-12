@@ -33,6 +33,8 @@ Every stage should be deliverable as one or a small bounded series of devctl pat
 
 **Ordering invariant:** A03/A04 precede serious A05+ data porting. Otherwise PostgreSQL-specific semantics will leak directly into the SQLite implementation and become harder to review.
 
+**[FACT — implementation status]** A03 and A04 are now present in the Arch-native repository. A04 provides a pure Rust reference adapter and reusable semantic scenarios; SQLite execution of those same scenarios remains the A05 gate, so this status does not claim dual-adapter persistence verification yet.
+
 ## 3. Suggested devctl patch discipline
 
 The provided devctl is v0.7.0 and already gives a suitable safety conveyor: validated manifest/safe paths, pre snapshot, declared checks, commit/push policy from workspace, failed archive/reset and UserTestSpace.

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A03",
-  "description": "Canonical UserTestSpace verification plan through A03. Deterministic gates support Git workspaces and Git-less UTS snapshots, replay after build/runtime artifacts, and Cargo tests exercise the transport-agnostic Rust application/domain boundary.",
+  "stage": "A04",
+  "description": "Canonical UserTestSpace verification plan through A04. Deterministic gates cover the storage-independent repository semantic boundary; Cargo tests execute the in-memory reference contract suite. A05 must reuse the same scenarios for SQLite.",
   "deterministic": [
     {
       "id": "a00",
@@ -73,6 +73,14 @@
         "python3",
         "-B",
         "tools/check_a03.py"
+      ]
+    },
+    {
+      "id": "a04",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a04.py"
       ]
     }
   ],
