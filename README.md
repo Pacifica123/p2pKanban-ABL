@@ -6,29 +6,27 @@ This repository follows the implementation sequence `A00 … A19` from the accep
 
 ## Current state
 
-**A00 is implemented. Runtime code is intentionally not implemented yet.**
+**A00 is implemented. A01a source/security foundation is implemented; A01 runtime acceptance is not yet claimed.**
 
-A00 freezes the reviewed web/backend, Android and devctl evidence, imports the external architecture package into this repository as the living SSOT, records protocol/export fixtures and migration/source digests, and provides an offline deterministic self-check.
+A01a adds the permanent React/Vite + Tauri 2 source layout, a Rust-created WebView window, deny-by-default navigation/new-window/download hooks, CSP with network connections disabled, and an empty Tauri capability set. It deliberately does not introduce a local HTTP server, filesystem/process plugins, persistence, auth or sync.
 
-The next patch is **A01 — Tauri 2 shell + packaged React/Vite asset**. Do not skip directly to SQLite or auth: A02–A04 establish the transport/application/repository seams before serious persistence porting.
+The patch-construction runner had no Rust/Cargo toolchain or crates cache, so it would be dishonest to fabricate `Cargo.lock` or claim a successful Tauri compile. The exact next patch is **A01b — resolver-generated Cargo lock + offline build/launch/security evidence**. After A01b is green, proceed to **A02 — explicit web↔desktop transport adapter**.
 
-## SSOT
+## Source layout
 
+- `src/` — React presentation source.
+- `src-tauri/` — native Tauri shell source and deny-by-default WebView policy.
 - `docs/architecture/` — implementation-driving architecture and ADRs.
 - `docs/IMPLEMENTATION_STATUS.md` — decision → files/tests → status → next patch traceability.
-- `docs/evidence/A00_EVIDENCE_BASELINE.md` — frozen source facts and classification policy.
-- `evidence/source-anchors.json` — content hashes of high-value implementation anchors.
-- `evidence/migrations.sha256` — PostgreSQL migration digest used as legacy semantic evidence, not a SQLite migration plan.
-- `fixtures/` — canonical logical compatibility fixtures for later contract tests.
+- `docs/evidence/A00_EVIDENCE_BASELINE.md` — frozen source facts.
+- `docs/evidence/A01_SHELL_FOUNDATION.md` — A01a evidence, classifications and A01b acceptance gap.
+- `evidence/` and `fixtures/` — frozen compatibility evidence for later stages.
 
-## Applying the initiating patch
-
-The dedicated target repository must already have a seed commit on `main` containing the sentinel file `ARCH_NATIVE_REPO` with the single line `p2pkanban-archlinux-native`, plus normal Git author identity configured. This is a devctl v0.7.0 rollback/targeting precondition documented as `DEBT-A00-001`; it is not a native runtime requirement.
-
-## Deterministic A00 check
+## Deterministic checks
 
 ```bash
 python3 -B tools/check_a00.py
+python3 -B tools/check_a01.py
 ```
 
-The check is offline-only and does not install packages, contact registries, start services or mutate `.devctl`.
+These checks are offline-only and do not install packages, contact registries, start services or mutate `.devctl`. They validate source/security contracts and npm lock consistency structurally. Real frontend/Rust compilation is an explicit A01b gate rather than a fake-green A01a check.

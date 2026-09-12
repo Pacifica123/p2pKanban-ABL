@@ -1,18 +1,21 @@
 # Exact next implementation sequence
 
-The next patch is **A01 — Tauri 2 shell + packaged React/Vite asset**.
+A01 is being delivered as a bounded two-patch stage rather than faking build evidence. **A01a — shell source/security foundation** is present after the current patch.
 
-A01 exit target:
+The exact next patch is **A01b — locked offline build + Arch launch/security evidence**.
 
-- dedicated Tauri 2 desktop shell on Linux using system WebKitGTK;
-- presentation assets are packaged/local and render with network unavailable;
-- no Docker/PostgreSQL/Node requirement at **runtime**;
-- no localhost backend or listening socket introduced;
-- remote/top-level WebView navigation is denied by explicit policy;
-- WebView has no arbitrary filesystem/process/network privilege;
-- frontend typecheck/build and Rust/Tauri build checks are real when build dependencies are present;
-- environment-dependent Wayland/X11 package smoke is recorded separately from deterministic source gates;
-- no persistence/auth/sync claims yet.
+A01b exit target:
+
+- review and commit a resolver-generated `src-tauri/Cargo.lock` for the exact Tauri dependency set;
+- `npm ci --offline` from an approved local cache/mirror, then real frontend typecheck/build;
+- `cargo test --locked --offline` and `cargo build --locked --offline` from an approved Cargo cache/vendor source;
+- packaged React/Vite assets are embedded/available to the Tauri binary;
+- built application launches with external network unavailable;
+- hostile HTTP/HTTPS/file/data/javascript top-level navigation and `window.open` are denied;
+- normal runtime has no Docker/PostgreSQL/Node requirement, localhost listener or mandatory system/user service;
+- record Arch-family WebKitGTK/GTK/glibc/session evidence separately from deterministic source gates.
+
+Only after A01b is green does the architecture advance to **A02 — explicit web↔desktop frontend transport adapter**.
 
 Then, in order: **A02 transport adapter → A03 application/domain boundary → A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.
 

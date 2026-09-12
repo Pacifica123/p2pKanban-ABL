@@ -1,5 +1,7 @@
-# Rust / Tauri build output
+# Rust / Tauri generated output
 /target/
+/src-tauri/target/
+/src-tauri/gen/
 
 # Frontend dependencies and generated bundles
 /node_modules/
