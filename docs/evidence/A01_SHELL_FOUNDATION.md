@@ -38,7 +38,7 @@ A01 is **not complete** until a provisioned Arch-family build host performs all 
 6. inspect the process/listener state and confirm no Docker, PostgreSQL, Node process, localhost listener or systemd user service is required at runtime;
 7. record WebKitGTK/GTK/glibc versions and session type as environment evidence, without promoting that single host to the full Wayland/X11 compatibility claim.
 
-These are host acceptance tasks, not hidden green checks in A01a. A01b added the strict offline build harness; A01c adds the runtime evidence collector; A01d must materialize the remaining host evidence.
+These are host acceptance tasks, not hidden green checks in A01a. A01b added the strict offline build harness; A01c added the runtime evidence collector. The historical A01d materialization label is superseded operationally by the canonical A02b `tools/uts_verify.py` pipeline; the evidence itself remains required before release claims.
 
 ## A01b follow-up
 

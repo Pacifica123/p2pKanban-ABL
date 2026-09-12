@@ -42,7 +42,7 @@ corrections = read("docs/architecture/08-implementation-corrections-and-debt.md"
 if "DEBT-A01-002" not in corrections or "Rust 1.90" not in corrections:
     fail("MSRV correction is not recorded explicitly")
 evidence = read("docs/evidence/A01C_HOST_EVIDENCE.md")
-for token in ("FACT", "INFERENCE", "PROPOSAL", "UNRESOLVED EXPERIMENT", "A01d", "Rust 1.90"):
+for token in ("FACT", "INFERENCE", "PROPOSAL", "UNRESOLVED EXPERIMENT", "tools/uts_verify.py", "Rust 1.90"):
     if token not in evidence:
         fail("A01c evidence missing classification/next-stage marker: " + token)
 status = read("docs/IMPLEMENTATION_STATUS.md")

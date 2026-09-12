@@ -29,7 +29,7 @@ A build gate that reports success when Cargo/WebKitGTK is absent would be weaker
 
 The harness deliberately does not install packages, invoke sudo/systemd, start Docker/PostgreSQL, contact registries, or create a localhost backend.
 
-## UNRESOLVED EXPERIMENT / A01c exit evidence
+## UNRESOLVED EXPERIMENT / host acceptance evidence
 
 A01 remains incomplete until a provisioned Arch-family host:
 
@@ -40,4 +40,4 @@ A01 remains incomplete until a provisioned Arch-family host:
 5. verifies hostile HTTP/HTTPS/file/data/javascript navigation, `window.open`, and download denial in the real WebView;
 6. verifies no Docker/PostgreSQL/Node process, listening localhost socket, root requirement, or mandatory system/user service is needed at runtime.
 
-A01b originally named that materialization step **A01c**. During A01c, upstream re-verification exposed the incorrect A01a Rust-floor claim and showed that a reusable runtime process/socket/XDG evidence collector was still missing. A01c therefore performs that explicit correction and adds the host runtime probe without fabricating execution. The remaining materialized lock/build/real-WebView evidence is now **A01d**. Only after A01d may A01 be marked implemented and A02 begin.
+A01b originally named that materialization step **A01c**, and A01c later called the remaining host step **A01d**. Those labels are retained only as provenance. DELIVERY-A01-003 subsequently allowed dependent source work to proceed with host evidence explicitly pending; A02 now exists. Starting with A02b, `tools/uts_verify.py` + `tools/uts_plan.json` are the canonical evolving host-verification mechanism. A01 remains partially implemented until the required build/runtime evidence actually passes.

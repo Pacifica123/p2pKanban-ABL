@@ -63,5 +63,6 @@ for forbidden in ("http://localhost", "https://localhost", "http://127.0.0.1", "
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
 if "A02" not in status or "A03" not in status: fail("implementation ledger missing A02/A03")
-if "UTS_A01_A02_VERIFICATION.md" not in read("docs/evidence/A02_TRANSPORT_BOUNDARY.md"): fail("A02 evidence must point to UTS gate")
+evidence = read("docs/evidence/A02_TRANSPORT_BOUNDARY.md")
+if "UTS_VERIFICATION.md" not in evidence or "A02B_UTS_BUILD_FINDINGS.md" not in evidence: fail("A02 evidence must point to canonical UTS gate/findings")
 print("A02 typed transport boundary: OK")

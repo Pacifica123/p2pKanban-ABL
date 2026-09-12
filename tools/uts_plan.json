@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "stage": "A02b",
+  "description": "Canonical UserTestSpace verification plan. devctl remains deterministic/network-free; this plan owns host/toolchain/runtime evidence.",
+  "deterministic": [
+    {"id": "a00", "command": ["python3", "-B", "tools/check_a00.py"]},
+    {"id": "a01", "command": ["python3", "-B", "tools/check_a01.py"]},
+    {"id": "a01b", "command": ["python3", "-B", "tools/check_a01b.py"]},
+    {"id": "a01c", "command": ["python3", "-B", "tools/check_a01c.py"]},
+    {"id": "a02", "command": ["python3", "-B", "tools/check_a02.py"]},
+    {"id": "a02b", "command": ["python3", "-B", "tools/check_a02b.py"]}
+  ],
+  "frontend": {
+    "offlineInstall": ["npm", "ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund"],
+    "networkPrepare": ["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"],
+    "typecheck": ["npm", "run", "typecheck"],
+    "build": ["npm", "run", "build"],
+    "requiredArtifact": "dist/index.html"
+  },
+  "cargo": {
+    "manifest": "src-tauri/Cargo.toml",
+    "lock": "src-tauri/Cargo.lock",
+    "lockOffline": ["cargo", "generate-lockfile", "--manifest-path", "src-tauri/Cargo.toml", "--offline"],
+    "lockNetwork": ["cargo", "generate-lockfile", "--manifest-path", "src-tauri/Cargo.toml"],
+    "fetchOffline": ["cargo", "fetch", "--manifest-path", "src-tauri/Cargo.toml", "--locked", "--offline"],
+    "fetchNetwork": ["cargo", "fetch", "--manifest-path", "src-tauri/Cargo.toml", "--locked"],
+    "test": ["cargo", "test", "--manifest-path", "src-tauri/Cargo.toml", "--locked", "--offline"],
+    "build": ["cargo", "build", "--manifest-path", "src-tauri/Cargo.toml", "--locked", "--offline"],
+    "requiredArtifact": "src-tauri/target/debug/p2pkanban-arch-native"
+  },
+  "host": {
+    "buildDoctor": ["python3", "-B", "tools/a01b_host_acceptance.py", "doctor"],
+    "runtimeDoctor": ["python3", "-B", "tools/a01c_host_runtime_probe.py", "doctor"],
+    "runtimeProbe": ["python3", "-B", "tools/a01c_host_runtime_probe.py", "launch-probe", "--seconds", "8", "--report", "{report_dir}/a01c-runtime.json"]
+  },
+  "manualEvidence": [
+    "In the native window confirm: mode: desktop",
+    "In the native window confirm: p2pkanban-arch-native 0.1.0 · ok · desktop",
+    "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified"
+  ]
+}

@@ -1,16 +1,10 @@
 # Exact next implementation sequence
 
-A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary, offline build harness and Linux runtime probe. Per DELIVERY-A01-003, unavailable Cargo/Arch GUI evidence is now delegated to UserTestSpace and remains explicitly verification-pending rather than blocking source-stage progression.
+A00 is complete. A01a–A01c established the permanent Tauri/React source/security boundary and host probes. A02 established the typed presentation transport seam. The first real UTS native build then found a concrete source/package defect: Tauri context expected `src-tauri/icons/icon.png`. **A02b** fixes that defect, removes the unsupported Node `<23` build-time cap, and makes `tools/uts_verify.py` + `tools/uts_plan.json` the canonical evolving UserTestSpace verification pipeline.
 
-A02 now establishes the explicit presentation transport seam:
+The UTS verifier must be run after applying A02b. A new compiler/runtime failure is evidence and re-opens the affected stage; it is not a reason to hide or weaken the gate. Host-dependent evidence may remain verification-pending without blocking unrelated source-stage work under DELIVERY-A01-003.
 
-- `apiRequest` remains the presentation-facing facade where practical;
-- web mode owns HTTP/fetch behavior;
-- desktop mode maps only explicit route/method pairs to named Tauri commands;
-- the first route is `GET /health` → `desktop_api_health`;
-- no localhost fallback, arbitrary command dispatcher, filesystem/process/network plugin or new capability permission exists.
-
-The exact next patch is **A03 — Rust application/domain boundary**.
+The exact next architecture patch is **A03 — Rust application/domain boundary**.
 
 A03 exit target:
 
@@ -18,6 +12,6 @@ A03 exit target:
 - move `desktop_api_health` behind that application boundary as the first end-to-end example;
 - define command DTO/error mapping conventions without importing PostgreSQL/SQLite concerns;
 - add deterministic tests proving application APIs contain no `sqlx::Pg*`, HTTP, Tauri or filesystem/network dependencies;
-- keep A01/A02 UTS commands in `docs/UTS_A01_A02_VERIFICATION.md`; a UTS failure re-opens the affected stage.
+- append A03 checks to `tools/uts_plan.json` rather than creating a new manual UTS command list.
 
 Then, in order: **A03 application/domain boundary → A04 repository contracts → A05 SQLite → A06 XDG/instance control → A07 minimal durable auth/workspace/board slice**.

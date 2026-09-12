@@ -1,6 +1,6 @@
 # ADR-001 — Arch shell and process model
 
-**Status:** accepted / implementation-driving; A01a source boundary + A01b/A01c acceptance contracts implemented, A01d materialized runtime evidence pending  
+**Status:** accepted / implementation-driving; A01a source boundary + A01b/A01c acceptance contracts implemented; A02b fixes first UTS build defect; post-fix materialized runtime evidence pending  
 **Decision:** Tauri 2 hosts the existing React/Vite UI using system WebKitGTK; privileged/application behavior lives in one in-process Rust core. No default localhost backend or system/user daemon.
 
 ## Grounds

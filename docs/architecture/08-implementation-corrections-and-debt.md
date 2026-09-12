@@ -38,11 +38,11 @@ A01b therefore adds a fail-closed offline host harness. Dependency/cache populat
 
 **Classification:** [FACT] from current upstream Tauri 2.11.5 workspace metadata, re-checked during A01c.  
 **Architecture impact:** build compatibility/evidence; ADR-001 process model is unchanged.  
-**Status:** source declaration corrected in A01c; host verification remains open until A01d.
+**Status:** source declaration corrected in A01c; host verification remains open in the canonical A02b UTS pipeline.
 
 A01a recorded `rust-version = 1.77.2` and described that value as the selected Tauri release's Rust floor. Current upstream Tauri 2.11.5 workspace metadata declares **Rust 1.90** via `rust-version = 1.90`, and the `tauri` 2.11.5 crate inherits that workspace value. A01c therefore changes the native package declaration to `1.90` and supersedes the A01a compatibility claim.
 
-This correction does **not** claim that 1.90 is the final reproducible build toolchain. The exact toolchain pin must be chosen from a successful A01d Arch-host build and cached/prepared explicitly so offline builds do not unexpectedly invoke rustup/network access.
+This correction does **not** claim that 1.90 is the final reproducible build toolchain. The exact toolchain pin must be chosen from a successful Arch-family UTS build and cached/prepared explicitly so offline builds do not unexpectedly invoke rustup/network access.
 
 ## DELIVERY-A01-003 — host-dependent verification delegated to UserTestSpace
 
@@ -51,3 +51,29 @@ This correction does **not** claim that 1.90 is the final reproducible build too
 The patch-construction environment may lack Cargo/Rust, Arch WebKitGTK development packages, a graphical Wayland/X11 session, or a populated offline npm/Cargo cache. Starting with A02, those unavailable host-dependent checks are explicitly delegated to UserTestSpace (UTS) when the deterministic source/contracts for the patch are green.
 
 This changes the **blocking policy**, not the evidence claim: A01/A02 host results remain `verification-pending` until the documented UTS commands pass. Dependent source stages may proceed when they do not rely on the unverified runtime property. Any UTS failure re-opens the affected Axx stage and must be corrected before release/packaging claims. Generic devctl checks remain offline/network-independent and never turn a missing toolchain into a fake success.
+
+## CORR-A02-004 — Tauri context required an application icon that A01/A02 omitted
+
+**Classification:** [FACT] from the first real UTS `cargo test --locked --offline` on the A02 snapshot.  
+**Architecture impact:** packaging/build correctness only; no process, IPC, persistence or privilege ADR changes.  
+**Status:** fixed in A02b; post-fix UTS compile/launch verification pending.
+
+`tauri::generate_context!()` failed before native tests could run because `src-tauri/icons/icon.png` was absent. This was a repository defect, not an unavailable-host limitation. A02b adds a repository-owned RGBA PNG and makes the icon path explicit in `tauri.conf.json` so the asset is part of the checked source contract rather than an undocumented Tauri default.
+
+## CORR-A02-005 — Node `<23` build-time upper bound was unsupported by evidence
+
+**Classification:** [FACT] from the same UTS run: Node 26.8.1 completed `npm ci`, TypeScript typecheck and Vite production build, while npm only warned about the repository's declared engine range.  
+**Architecture impact:** build tooling only; the packaged desktop runtime still has no Node dependency.  
+**Status:** corrected in A02b.
+
+The earlier `>=20 <23` range was a conservative assumption without an implementation-driving compatibility reason. A02b removes the artificial upper bound and retains `>=20`. Future incompatibility must be based on an actual toolchain failure or upstream requirement, not an arbitrary major-version ceiling.
+
+## DELIVERY-A02-006 — single-entry UTS verifier replaces per-patch manual command lists
+
+**Classification:** [PROPOSAL implemented as tooling contract], motivated by repeated host-only verification steps.  
+**Architecture impact:** verification workflow only.  
+**Status:** implemented in A02b.
+
+`tools/uts_verify.py` is now the stable UTS entry point and `tools/uts_plan.json` is the evolving machine-readable plan. Patches update the plan as host checks change. The verifier is offline by default, may populate caches only with explicit `--allow-network`, continues through independent checks, and stores text/JSON/log evidence under ignored `.uts-reports/`.
+
+This does not weaken `devctl`: generic patch checks remain deterministic/network-free, while host/toolchain/runtime evidence remains explicit and separately attributable.

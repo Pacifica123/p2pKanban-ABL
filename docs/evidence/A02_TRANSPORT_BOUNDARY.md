@@ -25,4 +25,4 @@ A03 should introduce the Rust application/domain service boundary behind these c
 
 ## UNRESOLVED EXPERIMENT / UTS EVIDENCE
 
-The patch-construction environment cannot install the locked npm package set or compile/run Tauri. `docs/UTS_A01_A02_VERIFICATION.md` contains exact commands for the user test host. Until those pass, A02 is source/contract implemented but runtime verification remains pending.
+The patch-construction environment cannot install the locked npm package set or compile/run Tauri. `docs/UTS_VERIFICATION.md` and `tools/uts_plan.json` now own the host verification sequence. The first UTS build passed frontend checks and Cargo dependency preparation but exposed the missing-icon defect recorded in `A02B_UTS_BUILD_FINDINGS.md`; A02b fixes it. Post-fix native build and WebView→Rust IPC evidence remain pending.

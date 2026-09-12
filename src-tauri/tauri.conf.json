@@ -10,10 +10,15 @@
     "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'",
-      "capabilities": ["main-minimal"]
+      "capabilities": [
+        "main-minimal"
+      ]
     }
   },
   "bundle": {
-    "active": false
+    "active": false,
+    "icon": [
+      "icons/icon.png"
+    ]
   }
 }

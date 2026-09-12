@@ -37,15 +37,17 @@ After the strict A01b offline build succeeds, `python3 -B tools/a01c_host_runtim
 
 The generated report is **test evidence**, not repository runtime state. It should be attached to release/validation records, not committed as a machine-specific generated artifact.
 
-## UNRESOLVED EXPERIMENT / A01d exit evidence
+## UNRESOLVED EXPERIMENT / current UTS exit evidence
 
-A01 is still not `implemented`. **A01d — materialized Cargo lock + Arch build/WebView runtime evidence** must:
+The historical **A01d** label meant “materialize lock/build/real-WebView evidence before progressing”. DELIVERY-A01-003 later changed that blocking policy: host-only evidence may remain verification-pending while unrelated source stages proceed, and A02 has now been implemented. A02b replaces the growing manual A01d command list with the canonical `tools/uts_verify.py` pipeline.
 
-1. on a provisioned Arch/EndeavourOS/Manjaro-family host, resolver-generate and review `src-tauri/Cargo.lock` for the exact manifest;
-2. decide and record the exact successfully tested Rust toolchain pin; do not add a speculative `rust-toolchain.toml` that can trigger an unprepared rustup network fetch;
-3. populate approved npm/Cargo caches as a distinct build-time preparation step, disconnect external network, and pass `tools/a01b_host_acceptance.py offline-build`;
-4. pass the A01c non-root graphical `launch-probe` and retain its JSON evidence outside Git;
-5. exercise hostile HTTP/HTTPS/file/data/javascript top-level navigation, `window.open`, and download attempts against the real WebView and prove the Rust callbacks deny them;
-6. capture Arch-family package/WebKitGTK/GTK/GLib/session versions and one real Wayland or X11 result without extrapolating to the untested display backend.
+A01 is still not fully runtime-verified. The current UTS evidence must eventually demonstrate:
 
-Only A01d may close A01 and unblock A02.
+1. a resolver-generated/reviewed `src-tauri/Cargo.lock` for the exact manifest;
+2. the exact successfully tested Rust toolchain and Arch-family system-library versions;
+3. offline npm/Cargo acceptance after any explicit cache preparation;
+4. non-root graphical launch with XDG isolation and no hidden listener/process dependencies;
+5. WebView→Rust IPC observation for the current allowlisted route;
+6. hostile HTTP/HTTPS/file/data/javascript navigation, `window.open`, and download denial before those properties are promoted to release-verified.
+
+The first real UTS attempt reached Tauri context generation and found a missing application icon. That concrete source defect is recorded and fixed by A02b; post-fix verification remains pending.
