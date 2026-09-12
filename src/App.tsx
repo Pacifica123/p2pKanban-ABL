@@ -256,13 +256,13 @@ export default function App() {
     <main className="app-shell" aria-labelledby="app-title">
       <header className="topbar">
         <div>
-          <p className="eyebrow">ARCH NATIVE · A08 DURABLE PLANNER</p>
+          <p className="eyebrow">ARCH NATIVE · A09 SECURE LOCAL-FIRST</p>
           <h1 id="app-title">p2pKanban</h1>
         </div>
         <div className="status-stack" aria-live="polite">
           <span>mode: <strong>{getApiTransportKind()}</strong></span>
           <span>{health ? `${health.service} ${health.version} · ${health.status}` : 'native IPC…'}</span>
-          <span>vault: <strong>{vault?.mode ?? 'checking'}</strong>{vault ? ` · durable secrets ${vault.durable === 'true' ? 'enabled' : 'disabled'}` : ''}</span>
+          <span>vault: <strong>{vault?.mode ?? 'checking'}</strong>{vault ? ` · ${vault.state} · durable secrets ${vault.durable === 'true' ? 'enabled' : 'disabled'}` : ''}</span>
           <span>local pending changes: <strong>{pendingCount}</strong></span>
         </div>
       </header>

@@ -8,7 +8,7 @@ use crate::{
             CardView, ChecklistItemView, ChecklistView, ColumnView, PlannerService, PlannerServiceError,
         },
         system::HealthView,
-        vault::{VaultMode, VaultService, VaultStatus},
+        vault::{VaultMode, VaultService, VaultState, VaultStatus},
         workspace::{BoardView, WorkspaceService, WorkspaceServiceError, WorkspaceView},
         ApplicationServices,
     },
@@ -126,10 +126,21 @@ fn planner_error_code(error: PlannerServiceError) -> String {
 fn vault_status_to_wire(status: VaultStatus) -> BTreeMap<&'static str, String> {
     let mode = match status.mode {
         VaultMode::SessionOnly => "session-only",
+        VaultMode::SecretService => "secret-service",
+        VaultMode::Passphrase => "passphrase",
+    };
+    let state = match status.state {
+        VaultState::Ready => "ready",
+        VaultState::ProviderUnavailable => "provider-unavailable",
+        VaultState::ProviderLocked => "provider-locked",
+        VaultState::ProviderCorrupt => "provider-corrupt",
+        VaultState::PassphraseRequired => "passphrase-required",
     };
     BTreeMap::from([
         ("mode", mode.to_owned()),
+        ("state", state.to_owned()),
         ("durable", status.durable.to_string()),
+        ("passphraseFallbackAvailable", status.passphrase_fallback_available.to_string()),
     ])
 }
 

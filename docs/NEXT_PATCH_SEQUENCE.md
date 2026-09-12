@@ -8,14 +8,18 @@ The A08 pending table is deliberately **not** a sync protocol/outbox claim. It r
 
 Run `python3 -B tools/uts_verify.py` in UserTestSpace. The canonical verifier now includes `deterministic.a08`, the full Cargo suite and a filtered `host.a08-planner-durability` probe for A08 close/reopen, tombstone and forced-abort tests.
 
-The exact next architecture patch is **A09 — production Linux secret persistence matrix**.
+**A09 is now implemented at source/deterministic-check level.** The existing `SecretVault` boundary now has a Linux Secret Service provider, an AEAD-encrypted typed profile vault, a versioned Argon2id passphrase provider and fail-closed session-only degradation for locked/absent/corrupt providers. No raw secret IPC or plaintext SQLite/localStorage/config fallback was added. Multi-host GNOME/KWallet/minimal-session evidence remains experiment-needed and is not inferred from one UTS host.
 
-A09 exit target:
+Run `python3 -B tools/uts_verify.py --allow-network` once if the new Rust crypto/keyring dependencies are not cached; acceptance is rechecked offline. Later runs can use the normal network-free command.
 
-- implement the existing `SecretVault` boundary against Secret Service when available/unlocked;
-- define and test locked/absent-provider behavior plus explicit session-only/passphrase fallback policy without plaintext SQLite/localStorage/config fallback;
-- keep normal-use root/systemd/KWallet assumptions optional and capability-detected;
-- add secret/log canaries and provider-state UTS evidence;
-- do not begin A10 sync transport until durable secret handling is fail-closed.
+The exact next architecture patch is **A10 — sync-core + roaming compatibility**.
 
-Then, in order: **A09 secret persistence → A10 sync-core/roaming compatibility → A11 device-link/import migration**.
+A10 exit target:
+
+- introduce sync payload/version/merge logic behind application/domain boundaries, using the A00 roaming fixtures and A08 pending identities rather than treating the pending table as an outbox protocol;
+- persist any refresh/device/board secret material only through `SecretVault`;
+- implement deterministic replay/conflict/tombstone/order/capability-epoch tests before adding relay transport breadth;
+- preserve web ↔ Android ↔ Linux compatibility and explicit schema/protocol negotiation;
+- do not begin A11 device-link/import migration until local/fixture sync-core behavior is deterministic.
+
+Then, in order: **A10 sync-core/roaming compatibility → A11 device-link/import migration → A12 parity surface**.

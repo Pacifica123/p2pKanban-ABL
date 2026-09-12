@@ -118,7 +118,7 @@ for token in (
         fail("vault boundary missing " + token)
 if re.search(r"#\[derive\([^\]]*Debug[^\]]*\)\]\s*pub struct SecretValue", vault):
     fail("SecretValue must not derive Debug")
-for forbidden in ("localstorage", "sessionstorage", "rusqlite", "secretservice", "zbus", "kwallet"):
+for forbidden in ("localstorage", "sessionstorage", "rusqlite", "secret_service::", "zbus::", "kwallet::"):
     if forbidden in vault.lower():
         fail("A07 vault boundary introduced premature or unsafe provider assumption: " + forbidden)
 
@@ -150,7 +150,6 @@ for token in (
     "instance::acquire(&prepared)",
     "SqliteWorkspaceCatalog::open(&prepared.paths.profile)",
     "WorkspaceService::new(",
-    "VaultService::session_only()",
     ".manage(workspace_service)",
     ".manage(vault_service)",
     "desktop_api::desktop_api_list_workspaces",
@@ -162,6 +161,8 @@ for token in (
 ):
     if token not in main:
         fail("A07 composition/allowlist missing " + token)
+if "VaultService::session_only()" not in main and "bootstrap_vault(&prepared.paths.profile" not in main:
+    fail("A07 vault composition boundary disappeared")
 if main.index("instance::acquire(&prepared)") > main.index("SqliteWorkspaceCatalog::open(&prepared.paths.profile)"):
     fail("durable profile opened before A06 single-writer ownership was acquired")
 
@@ -220,8 +221,8 @@ sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
 if "A08" not in sequence:
     fail("next-patch sequence lost the A08 architecture stage")
 adr = read("docs/architecture/adr/ADR-004-secrets.md")
-if "A07 session-only provider implemented" not in adr or "production providers remain A09" not in adr:
-    fail("ADR-004 was not synchronized with the A07 provider boundary")
+if "A07 established the `SecretVault` application interface" not in adr:
+    fail("ADR-004 lost the historical A07 provider-boundary record")
 
 evidence = json.loads(read("evidence/a07-vertical-slice.json"))
 if evidence.get("formatVersion") != 1 or evidence.get("stage") != "A07":

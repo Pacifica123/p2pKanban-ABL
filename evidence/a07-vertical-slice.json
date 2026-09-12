@@ -17,7 +17,7 @@
   "sources": [
     {
       "path": "docs/architecture/03-components-data-storage-sync-security.md",
-      "sha256": "fbb2b92d691a18d0704c09f19296d0a51bd0a748ff227e0dc00e8e47be7df306"
+      "sha256": "e283ceb8d5fc33176fbb67b23a06fb8ab040af95d0ee5df0d83bdade083702e5"
     },
     {
       "path": "docs/architecture/06-compatibility-migration.md",
@@ -25,7 +25,7 @@
     },
     {
       "path": "docs/architecture/adr/ADR-004-secrets.md",
-      "sha256": "489cfbbadb45fa314ec579d2d28ee74d8db160a4f994322f9f376e53561e9776"
+      "sha256": "dae50f458e222ab2db4c00ec0c34b22eea3701c3a259b25f85114449b4973ed1"
     },
     {
       "path": "docs/evidence/A06_XDG_INSTANCE_CONTROL.md",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A08",
-  "description": "Canonical UserTestSpace verification through A08. A08 adds schema-v3 durable columns/cards/archive/delete/checklist basics, tombstones and payload-free pending-local markers behind the application/repository boundary; pending state is not remote convergence.",
+  "stage": "A09",
+  "description": "Canonical UserTestSpace verification through A09. A09 adds fail-closed Linux Secret Service root protection, AEAD-encrypted typed secret records, a versioned Argon2id passphrase provider and session-only degradation; provider absence/locked state is supported, not a runtime failure.",
   "deterministic": [
     {
       "id": "a00",
@@ -138,6 +138,14 @@
         "-B",
         "tools/check_a08.py"
       ]
+    },
+    {
+      "id": "a09",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a09.py"
+      ]
     }
   ],
   "frontend": {
@@ -262,18 +270,45 @@
           "--",
           "--nocapture"
         ]
+      },
+      {
+        "id": "a09-vault-crypto",
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "src-tauri/Cargo.toml",
+          "--locked",
+          "--offline",
+          "a09_",
+          "--",
+          "--nocapture"
+        ]
+      },
+      {
+        "id": "a09-secret-service-state",
+        "command": [
+          "python3",
+          "-B",
+          "tools/a09_host_secret_service_probe.py",
+          "--report",
+          "{report_dir}/a09-secret-service.json"
+        ]
       }
     ]
   },
   "manualEvidence": [
     "In the native window confirm: mode: desktop",
-    "In the native window confirm: p2pkanban-arch-native 0.1.0 \u00b7 ok \u00b7 desktop",
+    "In the native window confirm: p2pkanban-arch-native 0.1.0 · ok · desktop",
     "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified",
     "With a visible primary window, optionally confirm that starting a second instance raises/focuses the existing window rather than opening another window",
     "A07 UI: create a workspace and board, close the native app, reopen it, then confirm the same workspace/board can be selected again",
     "A07 UI: confirm vault status is session-only and durable secrets are disabled; no secret value should ever be rendered",
     "A08 UI: create a column, card, checklist and checklist item; move/archive/restore the card and toggle the item, then close/reopen and confirm durable state",
     "A08 UI: delete a checklist/item/card and confirm it does not reappear after reopen",
-    "A08 pending count is local-only evidence; do not interpret it as remote convergence before A10"
+    "A08 pending count is local-only evidence; do not interpret it as remote convergence before A10",
+    "A09 UI: vault status may be secret-service/ready+durable or session-only/provider-unavailable|provider-locked|provider-corrupt; provider absence is a supported degraded state, not a reason to store plaintext secrets",
+    "A09 provider matrix across GNOME Secret Service, KWallet Secret Service compatibility and a minimal/no-provider session remains multi-host evidence; one UTS host does not prove the whole matrix",
+    "A09 passphrase provider is implemented/tested in Rust but passphrase activation is intentionally not exposed as a generic WebView secret IPC before credential provisioning/onboarding exists"
   ]
 }

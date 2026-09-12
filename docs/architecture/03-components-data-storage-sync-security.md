@@ -125,6 +125,8 @@ $XDG_CACHE_HOME/p2pkanban/            # default ~/.cache/p2pkanban
 
 Secret ciphertext may live in the SQLite DB, but the vault root/wrapping material must not be stored beside it in plaintext.
 
+**A09 implementation note.** The current implementation deliberately keeps typed secret ciphertext in `profiles/<profile>/secrets.vault`, not in SQLite. An unlocked freedesktop Secret Service default collection protects only a random 32-byte vault root. The explicit passphrase provider stores a versioned Argon2id root wrapper in `vault-root.passphrase`; locked/absent/corrupt providers fail closed to session-only status. This implements secret at-rest protection only and does not encrypt planner content.
+
 **A06 instance-control decision.** Writer ownership is a Linux kernel advisory `flock` on the profile-directory inode, so crashes release ownership without a persistent PID lock file. A secure `$XDG_RUNTIME_DIR/p2pkanban/instances/<profile>.sock` is used only for fixed second-instance activation routing when available; absence of a trustworthy runtime directory degrades routing but does not allow a second writer. See ADR-007.
 
 ### Filesystem policy

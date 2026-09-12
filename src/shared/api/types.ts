@@ -28,8 +28,10 @@ export interface BoardSummary {
 }
 
 export interface VaultStatus {
-  mode: 'session-only';
+  mode: 'session-only' | 'secret-service' | 'passphrase';
+  state: 'ready' | 'provider-unavailable' | 'provider-locked' | 'provider-corrupt' | 'passphrase-required';
   durable: 'true' | 'false';
+  passphraseFallbackAvailable: 'true' | 'false';
 }
 
 export interface ColumnSummary {

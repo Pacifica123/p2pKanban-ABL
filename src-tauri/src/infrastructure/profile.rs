@@ -11,6 +11,8 @@ pub struct ProfileStoragePaths {
     database: PathBuf,
     backups: PathBuf,
     migration_journal: PathBuf,
+    encrypted_vault: PathBuf,
+    passphrase_root_wrap: PathBuf,
 }
 
 impl ProfileStoragePaths {
@@ -19,6 +21,8 @@ impl ProfileStoragePaths {
             database: root.join("profile.db"),
             backups: root.join("backups"),
             migration_journal: root.join("migration-journal.json"),
+            encrypted_vault: root.join("secrets.vault"),
+            passphrase_root_wrap: root.join("vault-root.passphrase"),
             root,
         }
     }
@@ -37,6 +41,14 @@ impl ProfileStoragePaths {
 
     pub fn migration_journal(&self) -> &Path {
         &self.migration_journal
+    }
+
+    pub fn encrypted_vault(&self) -> &Path {
+        &self.encrypted_vault
+    }
+
+    pub fn passphrase_root_wrap(&self) -> &Path {
+        &self.passphrase_root_wrap
     }
 
     pub fn migration_backup(&self, from_version: u32) -> PathBuf {
@@ -103,6 +115,8 @@ mod tests {
         assert_eq!(paths.database(), Path::new("/tmp/example/profiles/default/profile.db"));
         assert_eq!(paths.backups(), Path::new("/tmp/example/profiles/default/backups"));
         assert_eq!(paths.migration_journal(), Path::new("/tmp/example/profiles/default/migration-journal.json"));
+        assert_eq!(paths.encrypted_vault(), Path::new("/tmp/example/profiles/default/secrets.vault"));
+        assert_eq!(paths.passphrase_root_wrap(), Path::new("/tmp/example/profiles/default/vault-root.passphrase"));
         assert_eq!(
             paths.migration_backup(0),
             PathBuf::from("/tmp/example/profiles/default/backups/pre-migration-v0.sqlite")

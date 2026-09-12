@@ -182,8 +182,8 @@ if 'plan.get("stage") != "A07b"' in a07b:
     fail("A07b checker still freezes UTS progression at A07b")
 
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A08":
-    fail("canonical UTS plan did not advance to A08")
+if plan.get("schemaVersion") != 1:
+    fail("unsupported canonical UTS plan schema")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 for required_id in ("a07", "a07b", "a08"):
     if required_id not in ids:
@@ -200,8 +200,8 @@ line = next((line for line in status.splitlines() if "A08 cards/order/archive/de
 if "implemented" not in line.lower() or "A09" not in line:
     fail("implementation ledger did not advance A08 toward A09")
 sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "exact next architecture patch is **A09" not in sequence:
-    fail("next-patch sequence did not advance to A09")
+if "A09" not in sequence:
+    fail("next-patch sequence lost the A09 architecture stage")
 
 # Evidence classifications + local source digests must stay reproducible.
 evidence = json.loads(read("evidence/a08-planner-semantics.json"))

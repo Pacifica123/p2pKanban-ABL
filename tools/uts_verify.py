@@ -16,6 +16,7 @@ import hashlib
 import json
 import os
 import re
+import secrets as pysecrets
 import shutil
 import subprocess
 import sys
@@ -197,6 +198,7 @@ def main() -> int:
     report_dir = (args.report_dir or (REPORT_ROOT / stamp)).resolve()
     report_dir.mkdir(parents=True, exist_ok=True)
     results: list[Result] = []
+    secret_canary = "P2PK_A09_UTS_" + pysecrets.token_hex(24)
 
     print(f"UTS plan {plan.get('stage')} -> {report_dir}")
 
@@ -245,7 +247,7 @@ def main() -> int:
 
     build_ok = False
     if cargo_ready:
-        env = {"CARGO_NET_OFFLINE": "true"}
+        env = {"CARGO_NET_OFFLINE": "true", "P2PKANBAN_UTS_SECRET_CANARY": secret_canary}
         test = run_command("cargo.test", cargo["test"], report_dir, env=env)
         results.append(test)
         build = run_command("cargo.build", cargo["build"], report_dir, env=env)
@@ -278,6 +280,19 @@ def main() -> int:
     # This makes one invocation prove repeatability instead of discovering state pollution
     # only on the next verifier run. No caches are deleted.
     run_deterministic_phase(plan, report_dir, results, "postbuild.deterministic.")
+
+    leaked = []
+    for log_path in sorted((report_dir / "logs").glob("*.log")):
+        try:
+            if secret_canary in log_path.read_text(encoding="utf-8", errors="replace"):
+                leaked.append(log_path.name)
+        except OSError:
+            pass
+    results.append(synthetic(
+        "security.secret-canary-logs",
+        "FAIL" if leaked else "PASS",
+        "secret canary leaked into: " + ", ".join(leaked) if leaked else "generated A09 canary absent from verifier logs",
+    ))
 
     return write_summary(plan, report_dir, results, args.allow_network)
 

@@ -1,6 +1,6 @@
 # ADR-004 — Arch secret storage and at-rest claims
 
-**Status:** accepted boundary; A07 session-only provider implemented, production providers remain A09  
+**Status:** implemented through A09 provider/storage boundary; multi-host provider matrix evidence remains experiment-needed  
 **Decision:** protect a random application vault root through freedesktop Secret Service when usable; otherwise require an explicit Argon2id-derived passphrase vault or session-only credentials. Encrypt typed secret records with authenticated encryption. Do not claim full planner DB encryption in v1.
 
 ## Grounds
@@ -27,4 +27,8 @@ GNOME/KDE/minimal session matrix; wrong-passphrase/corruption fail-closed tests;
 
 ## A07 implementation note
 
-A07 establishes the `SecretVault` application interface and wires a session-only provider. This is intentionally not durable secret persistence and does not weaken the ADR: no secret put/get/delete IPC is exposed, no secret-bearing SQLite columns are introduced, and the UI receives only provider capability status. Secret Service/KWallet and the explicit passphrase fallback remain A09.
+A07 established the `SecretVault` application interface and a session-only provider. No secret put/get/delete IPC or secret-bearing SQLite columns were introduced.
+
+## A09 implementation note
+
+A09 implements the Linux provider/storage boundary: an unlocked freedesktop Secret Service protects a random vault root; typed secrets live in an authenticated XChaCha20-Poly1305 profile vault; a versioned Argon2id passphrase provider is available as the explicit durable fallback; locked/absent/corrupt providers degrade fail-closed to session-only status. The passphrase provider is exercised from Rust and intentionally has no generic WebView secret bridge before a real credential-provisioning flow exists. Full planner database encryption is still not claimed.

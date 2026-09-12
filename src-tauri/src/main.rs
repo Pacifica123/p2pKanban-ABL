@@ -12,6 +12,7 @@ use application::{
 use infrastructure::{
     linux::{
         instance::{self, InstanceRole, SecondaryInstance, ACTIVATE_MAIN_V1},
+        secrets::bootstrap_vault,
         xdg::{DesktopPaths, XdgEnvironment},
     },
     sqlite::{repository::SqlitePlannerRepository, workspace::SqliteWorkspaceCatalog},
@@ -55,7 +56,7 @@ fn run() -> Result<(), String> {
         Box::new(planner_repository),
         Box::new(RandomPlannerIds),
     );
-    let vault_service = VaultService::session_only();
+    let vault_service = bootstrap_vault(&prepared.paths.profile, "default");
 
     let activation_receiver = primary.take_activation_receiver();
     let diagnostics = prepared.diagnostics();
