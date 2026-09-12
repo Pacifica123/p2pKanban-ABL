@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A07",
-  "description": "Canonical UserTestSpace verification through A07. A07 adds schema-v2 workspace/board durability, typed native planner IPC/UI, and a session-only SecretVault boundary; Cargo tests are the persistence/migration authority and no production secret provider is claimed.",
+  "stage": "A07b",
+  "description": "Canonical UserTestSpace verification through A07b. A07b corrects the first A07 UTS frontend literal-type and Rust migration-journal format-string compile defects; all A07 durability/vault contracts remain unchanged and A08 is still the next architecture stage.",
   "deterministic": [
     {
       "id": "a00",
@@ -121,6 +121,14 @@
         "python3",
         "-B",
         "tools/check_a07.py"
+      ]
+    },
+    {
+      "id": "a07b",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a07b.py"
       ]
     }
   ],

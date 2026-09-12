@@ -60,7 +60,7 @@ fn write_journal(
     state: &str,
 ) -> Result<(), ProfileOpenError> {
     let body = format!(
-        "{\n  \"formatVersion\": 1,\n  \"fromSchema\": {from},\n  \"toSchema\": {to},\n  \"state\": \"{state}\"\n}\n"
+        "{{\n  \"formatVersion\": 1,\n  \"fromSchema\": {from},\n  \"toSchema\": {to},\n  \"state\": \"{state}\"\n}}\n"
     );
     write_private_file(layout.migration_journal(), body.as_bytes()).map_err(|_| ProfileOpenError::Io)
 }

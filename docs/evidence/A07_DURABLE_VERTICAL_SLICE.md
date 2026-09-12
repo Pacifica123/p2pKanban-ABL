@@ -1,6 +1,6 @@
 # A07 — durable workspace/board vertical slice + vault boundary
 
-**Status: implemented at source/test level; Cargo/Tauri host verification is delegated to the canonical UTS verifier.**
+**Status: implemented; first canonical UTS run exposed two compile defects corrected by A07b. Post-fix host verification remains delegated to the canonical UTS verifier.**
 
 ## Fact
 
@@ -61,3 +61,8 @@ Rust tests cover:
 - Dedicated automated WebView click/reopen evidence is not introduced; UTS Cargo tests are the durable persistence authority and the rendered scenario remains manual evidence.
 
 The exact next architecture patch is **A08 — cards/order/archive/delete/checklists durable planner slice**.
+
+
+## A07b UTS correction
+
+The first A07 UTS run found TypeScript `TS2367` and a Rust migration-journal `format!` literal-brace error. A07b corrects those source defects without changing schema v2, persistence semantics or vault policy. The accompanying Tauri `frontendDist` error was cascading from the failed frontend build. See `docs/evidence/A07B_UTS_BUILD_FIX.md`.

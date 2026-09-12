@@ -29,5 +29,5 @@ export interface BoardSummary {
 
 export interface VaultStatus {
   mode: 'session-only';
-  durable: 'false';
+  durable: 'true' | 'false';
 }
