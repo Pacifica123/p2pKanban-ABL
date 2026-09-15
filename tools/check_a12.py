@@ -166,6 +166,12 @@ for token in [
         fail("A11→A12 parity materialization missing " + token)
 if "now_rfc3339" in import_adapter or "legacy.imported" in import_adapter:
     fail("A12 import must not fabricate activity chronology/kind")
+# CORR-A12-001: parsed opaque-section JSON is local to section_array; never return
+# references into that temporary Value. Keep the materialization helper owned.
+if "Result<Vec<Map<String, Value>>, ImportRepositoryError>" not in import_adapter or ".as_object().cloned()" not in import_adapter:
+    fail("CORR-A12-001 owned opaque-section materialization regressed")
+if "Result<Vec<&" in import_adapter and "fn section_array" in import_adapter:
+    fail("CORR-A12-001 section_array must not return references into parsed local JSON")
 
 fixture = load("fixtures/export/portable-board-bundle-v1-parity.json")
 payload = fixture.get("payload", {})
@@ -245,7 +251,7 @@ next_sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
 if "A13" not in next_sequence or "lifecycle/integration capability detection" not in next_sequence:
     fail("next stage after A12 is not A13 lifecycle/integration")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
-for token in ["DEBT-A12-001", "roaming-v1-unsupported", "DEBT-A12-002", "payload.appearance"]:
+for token in ["DEBT-A12-001", "roaming-v1-unsupported", "DEBT-A12-002", "payload.appearance", "CORR-A12-001", "E0515"]:
     if token not in debt:
         fail("A12 parity/debt ledger missing " + token)
 

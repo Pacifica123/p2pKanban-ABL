@@ -210,7 +210,7 @@ impl ParityRepository for SqliteParityRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::parity::{ParityRepository, ParityService, RandomParityIds};
+    use crate::application::parity::{ParityService, RandomParityIds};
     use crate::infrastructure::profile::ProfileStoragePaths;
     use std::{fs,path::PathBuf,sync::atomic::{AtomicU64,Ordering}};
 

@@ -179,3 +179,13 @@ the A12 construction environment, so the Arch adapter uses normalized
 claiming byte-identical reproduction of an unseen legacy event body. This must be
 rechecked against source before any future protocol-version or multi-client
 appearance expansion.
+
+## CORR-A12-001 — portable parity section helper returned references into temporary JSON
+
+**Classification:** [FACT] from canonical A12 UTS `20260915T083858Z`.
+**Architecture impact:** Rust compile correctness only; schema v6, parity semantics, wire compatibility, privileges and import transaction semantics are unchanged.
+**Status:** corrected inside A12; no A12b stage.
+
+The first canonical A12 Cargo run passed deterministic/frontend/offline-lock/fetch gates and then failed both `cargo test --locked --offline` and `cargo build --locked --offline` with Rust `E0515`. `section_array()` parsed an opaque portable section into a function-local `serde_json::Value` and attempted to return `Vec<&Map<String, Value>>`; those references could not outlive the local parsed value.
+
+A12 now returns owned `Map<String, Value>` values by cloning each validated object from the parsed array. Materialization borrows those owned maps only within the caller loop, preserving the same validation, stable IDs and atomic import behavior without extending any lifetime unsafely. The only host warning observed in the same run—an unused `ParityRepository` test import—is removed as compile hygiene. `tools/check_a12.py` now rejects reintroduction of a borrowed `section_array` result.

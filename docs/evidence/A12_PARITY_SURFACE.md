@@ -90,3 +90,7 @@ A12 does not add live relay orchestration, a new roaming protocol version,
 attachments, desktop lifecycle/tray/notification integration, or generic
 filesystem/keyring privilege. Those remain later stages. A13 is the next
 architecture stage after A12 receives a green canonical UTS.
+
+## A12 host compile correction
+
+`CORR-A12-001` records the first canonical host Cargo result: deterministic/frontend/offline dependency acceptance passed, while Rust rejected the portable parity `section_array()` helper with `E0515` because it returned references into function-local parsed JSON. The helper now returns owned object maps; this is a compile-correctness correction only and does not change schema, import semantics, IPC privilege or roaming claims.

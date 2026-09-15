@@ -5,7 +5,8 @@
   "facts": [
     "A00/A10 roaming evidence includes board.snapshot appearance and the accepted board.appearance.put operation family.",
     "The frozen roaming/1 operation set does not establish label/comment mutation operations.",
-    "A11 portable import preserves labels, cardLabels, comments, boardAppearanceSettings and activityEntries as opaque sections."
+    "A11 portable import preserves labels, cardLabels, comments, boardAppearanceSettings and activityEntries as opaque sections.",
+    "Canonical A12 UTS 20260915T083858Z passed deterministic/frontend/offline Cargo lock+fetch gates and exposed Rust E0515 in parity portable-section materialization before native build."
   ],
   "inferences": [
     "Labels/comments must use an explicit local unsupported-sync ledger until a compatible roaming operation exists.",
@@ -20,7 +21,7 @@
   "unresolved": [
     "A compatible versioned cross-client wire contract for label/comment mutations remains future work.",
     "Exact legacy Android/web board.appearance.put payload bytes should be rechecked when original source archives are available.",
-    "Canonical A12 Cargo/frontend/runtime UTS and rendered UI evidence remain required before A13."
+    "Canonical A12 Cargo/frontend/runtime UTS must be rerun after CORR-A12-001 before A13."
   ],
   "externalAnchors": [
     {
@@ -54,11 +55,11 @@
     },
     {
       "path": "src-tauri/src/infrastructure/sqlite/parity.rs",
-      "sha256": "934625e1837f2a8082814888d978f666d9dea4eac07d79a8827c5124f16b3de5"
+      "sha256": "d9910e5b1e40b3376c38fcfc8bbfc3723995a15209caa866333dcc399cfe7196"
     },
     {
       "path": "src-tauri/src/infrastructure/sqlite/import.rs",
-      "sha256": "c43a5643b55c16366945f9e5fe5eb3c47c5b8221b08f89550fa590550e91b550"
+      "sha256": "461f7cca742fba82bd8eea45841166ed3e7461209ef170f02f30453427b9b209"
     },
     {
       "path": "src-tauri/src/infrastructure/sqlite/sync.rs",
@@ -102,7 +103,7 @@
     },
     {
       "path": "tools/check_a12.py",
-      "sha256": "9724c494d504e7a0e586bc0f72362b0b564ced109209582ed355cf592e3e5e95"
+      "sha256": "0fc15b80ee65fe735497127d999a0bfc22c5e012adcab6b3e5a99bff8152cdc9"
     },
     {
       "path": "tools/uts_plan.json",
@@ -110,7 +111,7 @@
     },
     {
       "path": "docs/evidence/A12_PARITY_SURFACE.md",
-      "sha256": "e8c784458067819216d971a1e01827e3da05e70178af22810a05361730c1f453"
+      "sha256": "3b9355f926a9f37effd0b6a3c6cac8f2bdf3fa1bf9e98cb337e9f1b132db2ccb"
     },
     {
       "path": "docs/architecture/06-compatibility-migration.md",
@@ -118,7 +119,11 @@
     },
     {
       "path": "docs/architecture/08-implementation-corrections-and-debt.md",
-      "sha256": "d08da3b93e1c1320997d4b333c10efbf4f693cd1a81ead45103e6e2ac0bc871d"
+      "sha256": "fb16398472f5054b706c31ef0ee60eea1cb75ec246526571d802a4103bea793a"
+    },
+    {
+      "path": "docs/IMPLEMENTATION_STATUS.md",
+      "sha256": "b4cc55fa8da395680b3bfe73d37629bacefb9b2cd1da6797968ecb135cb95386"
     }
   ]
 }
