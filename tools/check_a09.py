@@ -85,6 +85,7 @@ for token in ("P2PKANBAN_UTS_SECRET_CANARY", "security.secret-canary-logs"):
     if token not in verifier: fail("UTS secret-canary contract missing " + token)
 plan = json.loads(read("tools/uts_plan.json"))
 if plan.get("schemaVersion") != 1: fail("UTS plan schema mismatch")
+current_stage = plan.get("stage")
 # A09 remains a regression gate after later stages; it must not freeze the canonical plan at A09.
 ids = [x.get("id") for x in plan.get("deterministic", [])]
 for required_id in ("a08", "a09"):
@@ -114,11 +115,18 @@ ev = json.loads(read("evidence/a09-secret-persistence.json"))
 if ev.get("formatVersion") != 1 or ev.get("stage") != "A09": fail("A09 evidence metadata mismatch")
 for key in ("facts", "inferences", "proposals", "unresolved", "externalAnchors"):
     if not ev.get(key): fail("A09 evidence classification missing " + key)
+# A09 evidence freezes the bytes that proved A09 itself. Later architecture stages may
+# legitimately evolve composition roots such as main.rs while the A09 vault contract
+# continues to be checked structurally above. Keep immutable A09 implementation bytes
+# pinned, but do not make the historical evidence digest an architecture freeze.
+evolving_after_a09={"src-tauri/src/main.rs"}
 for item in ev.get("sources", []):
     rel=item.get("path"); digest=item.get("sha256")
     if not isinstance(rel,str) or rel.startswith("/") or ".." in Path(rel).parts: fail("unsafe A09 evidence source path")
     p=ROOT/rel
     if not p.is_file(): fail("missing A09 evidence source " + rel)
+    if current_stage != "A09" and rel in evolving_after_a09:
+        continue
     if hashlib.sha256(p.read_bytes()).hexdigest()!=digest: fail("A09 evidence source digest drifted: " + rel)
 
 print("A09 Linux secret persistence matrix: OK")

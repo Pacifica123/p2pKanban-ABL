@@ -10,9 +10,9 @@ A08 `pending_local_changes` remains a local mutation-intent table, not a wire ou
 
 Run `python3 -B tools/uts_verify.py --allow-network` once if the new direct Rust dependencies are not already cached; final acceptance is still rechecked offline.
 
-The exact next architecture patch after A10 UTS is green is **A11 — device-link/2 + web-node-link/bundle import migration**.
+A11 is now the implemented destination/import boundary for **device-link/2 + web-node-link/bundle migration**. Its canonical Cargo/offline UTS remains the acceptance gate; the A10 serde resolver prerequisite correction is intentionally absorbed here rather than split into A10b/A09c.
 
-A11 exit target:
+A11 implemented/acceptance target:
 
 - consume the existing `p2p-kanban-device-link/2` capability/snapshot contract without exposing raw secrets to WebView;
 - import/provision board/workspace state into the A07/A08/A10 native repositories atomically;
@@ -20,4 +20,11 @@ A11 exit target:
 - provide deterministic malformed/replay/downgrade/rollback tests against A00 device-link and portable-bundle fixtures;
 - keep browser/Docker node-link assumptions outside the native runtime.
 
-Then, in order: **A11 device-link/import migration → A12 parity surface → A13 lifecycle/integration capability detection**.
+After A11 canonical UTS is green, the next architecture patch is **A12 — labels/comments/activity/appearance parity**, then **A13 lifecycle/integration capability detection**.
+
+
+## A11 implemented boundary
+
+A11 adds schema v5 import receipts/principal/capability metadata, a storage-independent import plan, portable bundle v1 roundtrip/import, device-link/2 grant binding, and web-node-link v1 destination provisioning. New native device/replica identity is not copied from a legacy deployment; board/device secret bytes go only through `SecretVault`. Portable imports do not create `pending_local_changes`. Shared workspaces and node-local hides omitted by web-node-link v1 are surfaced in the import report.
+
+The WebView still has no generic filesystem/keyring/network privilege. Live Nostr device-link event verification/chunk transport and legacy-node HTTP/session acquisition remain native transport adapters outside this A11 destination boundary and are not claimed as implemented.

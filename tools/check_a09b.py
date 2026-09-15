@@ -25,6 +25,7 @@ for token in ('XChaCha20Poly1305','XNonce','aead::{Aead, KeyInit, Payload}'):
 
 plan=json.loads(read("tools/uts_plan.json"))
 if plan.get("schemaVersion") != 1: fail("UTS plan schema drifted")
+current_stage=plan.get("stage")
 ids=[x.get("id") for x in plan.get("deterministic",[])]
 for rid in ("a09","a09b"):
     if rid not in ids: fail("missing deterministic gate " + rid)
@@ -46,11 +47,14 @@ ev=json.loads(read("evidence/a09b-resolver-correction.json"))
 if ev.get("formatVersion") != 1 or ev.get("stage") != "A09b": fail("A09b evidence metadata mismatch")
 for key in ("facts","inferences","proposals","unresolved","externalAnchors"):
     if not ev.get(key): fail("A09b evidence missing " + key)
+evolving_after_a09b={"src-tauri/Cargo.toml", "tools/check_a09.py", "tools/uts_verify.py"}
 for item in ev.get("sources",[]):
     rel=item.get("path"); expected=item.get("sha256")
     if not isinstance(rel,str) or rel.startswith("/") or ".." in Path(rel).parts: fail("unsafe evidence source path")
     p=ROOT/rel
     if not p.is_file(): fail("missing evidence source " + rel)
+    if current_stage != "A09b" and rel in evolving_after_a09b:
+        continue
     if hashlib.sha256(p.read_bytes()).hexdigest()!=expected: fail("evidence source digest drifted: " + rel)
 
 print("A09b Cargo resolver correction: OK")

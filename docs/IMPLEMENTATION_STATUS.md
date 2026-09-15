@@ -22,8 +22,8 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | ADR-004 Secret Service/passphrase/session-only secret policy | `application/vault.rs`, `infrastructure/linux/secrets.rs`, ADR-004, status-only vault IPC | **implemented through A09 storage/provider boundary; multi-host provider matrix remains experiment-needed** | A10 |
 | A09 production Linux secret persistence matrix | `infrastructure/linux/secrets.rs`, encrypted profile vault/root wrapper, Secret Service bootstrap, Argon2id/XChaCha20-Poly1305 tests, `tools/check_a09.py`, `tools/a09_host_secret_service_probe.py`, `docs/evidence/A09_SECRET_PERSISTENCE.md` | **implemented; user-reported canonical UTS green, multi-host provider matrix remains experiment-needed** | A10 |
 | A09b canonical UTS Cargo resolver correction | `src-tauri/Cargo.toml`, `tools/check_a09b.py`, `docs/evidence/A09B_UTS_RESOLVER_CORRECTION.md`, `evidence/a09b-resolver-correction.json` | **implemented, but fresh-host UTS exposed a second exact-getrandom resolver conflict; corrected inside A10** | A10 |
-| A10 sync-core + Nostr roaming compatibility | `domain/sync.rs`, `application/sync.rs`, SQLite schema v4/outbox/merge adapter, corrected/golden roaming fixtures, relay-disruption harness, A09b getrandom correction, `tools/check_a10.py`, `docs/evidence/A10_SYNC_ROAMING_COMPATIBILITY.md` | **implemented at source/deterministic-check level; canonical UTS Cargo/offline compatibility run pending** | A11 |
-| A11 device-link/2 + web-node-link/bundle migration | compatibility fixture/evidence only | **planned** | A11 |
+| A10 sync-core + Nostr roaming compatibility | `domain/sync.rs`, `application/sync.rs`, SQLite schema v4/outbox/merge adapter, corrected/golden roaming fixtures, relay-disruption harness, A09b getrandom correction, `tools/check_a10.py`, `docs/evidence/A10_SYNC_ROAMING_COMPATIBILITY.md` | **implemented; A10 UTS deterministic/frontend passed, final Cargo offline re-resolution exposed the exact serde 1.0.229 conflict corrected as an A11 prerequisite** | A11 |
+| A11 device-link/2 + web-node-link/bundle migration | schema v5, `domain/import.rs`, `application/import.rs`, SQLite import adapter, SecretVault provisioning, portable v1 roundtrip, `tools/check_a11.py`, `docs/evidence/A11_DEVICE_LINK_IMPORT_MIGRATION.md` | **implemented at source/deterministic level; canonical Cargo/offline UTS pending** | A12 |
 | A12 labels/comments/activity/appearance parity | none yet | **planned** | A12 |
 | ADR-006 foreground lifecycle; systemd-user optional only | architecture only | **planned** | A13 |
 | A13 Wayland/X11 + notifications/deep links/tray capability detection | none yet | **planned** | A13 |
@@ -50,3 +50,8 @@ A09 protects typed credentials/capabilities/keys, not planner content. It does *
 ## A09b UTS correction
 
 Canonical A09 UTS proved the application/frontend gates but rejected the dependency graph during final offline lock resolution because `chacha20poly1305 0.11.0` selected yanked `chacha20 0.10.1`. A09b changes only that AEAD pin to the stable 0.10.1 line; offline acceptance remains mandatory.
+
+
+## A11 boundary note
+
+A11 adds a Rust-only destination/import boundary for device-link/2, web-node-link v1 and portable bundle v1. It does not expose generic file/keyring/network privileges to the WebView and does not claim live relay signature/chunk transport or legacy-node HTTP/session orchestration. SQLite import is transactional and migration-targeted imports require an empty/fresh profile while preserving stable logical UUIDs; board/device secret material remains SecretVault-only, with collision rejection and best-effort compensation across the unavoidable SQLite↔Secret Service transaction boundary.

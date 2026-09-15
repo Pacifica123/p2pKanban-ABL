@@ -9,9 +9,9 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::infrastructure::profile::{write_private_file, ProfileStoragePaths};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 4;
-pub const MIN_READER_SCHEMA_VERSION: u32 = 4;
-pub const MIN_WRITER_SCHEMA_VERSION: u32 = 4;
+pub const CURRENT_SCHEMA_VERSION: u32 = 5;
+pub const MIN_READER_SCHEMA_VERSION: u32 = 5;
+pub const MIN_WRITER_SCHEMA_VERSION: u32 = 5;
 pub const BUSY_TIMEOUT_MS: u64 = 2_500;
 
 pub const MIGRATION_V0_TO_V1_ID: &str = "desktop-0001-initial-planner";
@@ -22,11 +22,14 @@ pub const MIGRATION_V2_TO_V3_ID: &str = "desktop-0003-planner-slice";
 pub const MIGRATION_V2_TO_V3_SHA256: &str = "ebcec1f2d34192257a11b497155bfec84937f6fc7de8edbed35bb0a67569dd48";
 pub const MIGRATION_V3_TO_V4_ID: &str = "desktop-0004-sync-core";
 pub const MIGRATION_V3_TO_V4_SHA256: &str = "d975a65e66c6f4208d97e1a9d8e8c07b3dd6fe1070ebe32e894da3bfc0b0999a";
+pub const MIGRATION_V4_TO_V5_ID: &str = "desktop-0005-import-link";
+pub const MIGRATION_V4_TO_V5_SHA256: &str = "f32f6c68584c4b43c06fd817bb567cce33064fdceb4dd8452f16249679a62726";
 
 const SCHEMA_V1: &str = include_str!("../../../migrations/0001_initial.sql");
 const SCHEMA_V2: &str = include_str!("../../../migrations/0002_workspace_board_titles.sql");
 const SCHEMA_V3: &str = include_str!("../../../migrations/0003_planner_slice.sql");
 const SCHEMA_V4: &str = include_str!("../../../migrations/0004_sync_core.sql");
+const SCHEMA_V5: &str = include_str!("../../../migrations/0005_import_link.sql");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProfileSchemaInfo {
@@ -184,6 +187,18 @@ fn apply_v3_to_v4(conn: &mut Connection, force_failure: bool) -> Result<(), Prof
     Ok(())
 }
 
+fn apply_v4_to_v5(conn: &mut Connection, force_failure: bool) -> Result<(), ProfileOpenError> {
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    tx.execute_batch(SCHEMA_V5)?;
+    let applied_at = epoch_millis();
+    record_migration(&tx, MIGRATION_V4_TO_V5_ID, MIGRATION_V4_TO_V5_SHA256, applied_at)?;
+    if force_failure {
+        return Err(ProfileOpenError::MigrationRecovered);
+    }
+    tx.commit()?;
+    Ok(())
+}
+
 fn migrate_if_needed(
     conn: &mut Connection,
     layout: &ProfileStoragePaths,
@@ -200,7 +215,7 @@ fn migrate_if_needed(
     if from == CURRENT_SCHEMA_VERSION {
         return Ok(());
     }
-    if from > 3 {
+    if from > 4 {
         return Err(ProfileOpenError::UnsupportedSchema {
             found: from,
             max_writer: CURRENT_SCHEMA_VERSION,
@@ -234,7 +249,11 @@ fn migrate_if_needed(
             current = pragma_user_version(conn)?;
         }
         if current == 3 {
-            apply_v3_to_v4(conn, force_failure)?;
+            apply_v3_to_v4(conn, false)?;
+            current = pragma_user_version(conn)?;
+        }
+        if current == 4 {
+            apply_v4_to_v5(conn, force_failure)?;
         }
         if pragma_user_version(conn)? != CURRENT_SCHEMA_VERSION {
             return Err(ProfileOpenError::InvalidSchemaMetadata);
@@ -267,6 +286,7 @@ fn verify_migration_line(conn: &Connection) -> Result<(), ProfileOpenError> {
         (MIGRATION_V1_TO_V2_ID.to_owned(), MIGRATION_V1_TO_V2_SHA256.to_owned()),
         (MIGRATION_V2_TO_V3_ID.to_owned(), MIGRATION_V2_TO_V3_SHA256.to_owned()),
         (MIGRATION_V3_TO_V4_ID.to_owned(), MIGRATION_V3_TO_V4_SHA256.to_owned()),
+        (MIGRATION_V4_TO_V5_ID.to_owned(), MIGRATION_V4_TO_V5_SHA256.to_owned()),
     ];
     if observed != expected {
         return Err(ProfileOpenError::InvalidSchemaMetadata);
@@ -345,9 +365,9 @@ mod tests {
         let layout = temp_profile("pragmas");
         cleanup(&layout);
         let (conn, info) = open_profile(&layout).unwrap();
-        assert_eq!(info.schema_version, 4);
-        assert_eq!(info.min_reader, 4);
-        assert_eq!(info.min_writer, 4);
+        assert_eq!(info.schema_version, 5);
+        assert_eq!(info.min_reader, 5);
+        assert_eq!(info.min_writer, 5);
         let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |row| row.get(0)).unwrap();
         let sync: i64 = conn.query_row("PRAGMA synchronous", [], |row| row.get(0)).unwrap();
         let mode: String = conn.query_row("PRAGMA journal_mode", [], |row| row.get(0)).unwrap();
@@ -361,7 +381,7 @@ mod tests {
     }
 
     #[test]
-    fn v1_profile_migrates_to_v4_and_preserves_workspace_board_identity() {
+    fn v1_profile_migrates_to_v5_and_preserves_workspace_board_identity() {
         let layout = temp_profile("v1-to-v2");
         cleanup(&layout);
         layout.prepare().unwrap();
@@ -379,7 +399,7 @@ mod tests {
             ).unwrap();
         }
         let (conn, info) = open_profile(&layout).unwrap();
-        assert_eq!(info.schema_version, 4);
+        assert_eq!(info.schema_version, 5);
         let row: (String, String, String, String) = conn.query_row(
             "SELECT w.id, w.title, b.id, b.title FROM workspaces w JOIN boards b ON b.workspace_id=w.id",
             [],
@@ -437,7 +457,7 @@ mod tests {
     }
 
     #[test]
-    fn a10_v2_profile_migrates_to_v4_preserving_existing_planner_identity() {
+    fn a10_v2_profile_migrates_to_v5_preserving_existing_planner_identity() {
         let layout = temp_profile("v2-to-v3");
         cleanup(&layout);
         layout.prepare().unwrap();
@@ -465,7 +485,7 @@ mod tests {
         }
 
         let (conn, info) = open_profile(&layout).unwrap();
-        assert_eq!(info.schema_version, 4);
+        assert_eq!(info.schema_version, 5);
         let row: (String, String, String, String) = conn.query_row(
             "SELECT w.id, b.id, c.id, k.id FROM workspaces w JOIN boards b ON b.workspace_id=w.id JOIN columns c ON c.board_id=b.id JOIN cards k ON k.column_id=c.id",
             [],
@@ -495,7 +515,7 @@ mod tests {
         let result = open_profile(&layout);
         assert!(matches!(
             result,
-            Err(ProfileOpenError::UnsupportedSchema { found: 99, max_writer: 4 })
+            Err(ProfileOpenError::UnsupportedSchema { found: 99, max_writer: 5 })
         ));
         cleanup(&layout);
     }

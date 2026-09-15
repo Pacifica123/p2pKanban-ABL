@@ -22,8 +22,11 @@ required=[
 for rel in required:
     if not (ROOT/rel).is_file(): fail('missing '+rel)
 
+plan=load('tools/uts_plan.json')
+current_stage=plan.get('stage')
 cargo=read('src-tauri/Cargo.toml')
-for token in ['serde = { version = "=1.0.229"','serde_json = "=1.0.151"','base64 = "=0.22.1"','hmac = "=0.12.1"','sha2 = "=0.10.9"','time = { version = "=0.3.55"','chacha20poly1305 = "=0.10.1"','getrandom = "=0.4.2"']:
+serde_pin = 'serde = { version = "=1.0.229"' if current_stage == 'A10' else 'serde = { version = "=1.0.228"'
+for token in [serde_pin,'serde_json = "=1.0.151"','base64 = "=0.22.1"','hmac = "=0.12.1"','sha2 = "=0.10.9"','time = { version = "=0.3.55"','chacha20poly1305 = "=0.10.1"','getrandom = "=0.4.2"']:
     if token not in cargo: fail('missing exact A10 dependency: '+token)
 for forbidden in ['sqlx','postgres','axum']:
     if forbidden in cargo.lower(): fail('forbidden backend dependency leaked into native Cargo.toml: '+forbidden)
@@ -48,8 +51,10 @@ for secret in ['refresh_token','access_token','board_key','private_key','vault_r
 if sha('src-tauri/migrations/0004_sync_core.sql')!='d975a65e66c6f4208d97e1a9d8e8c07b3dd6fe1070ebe32e894da3bfc0b0999a':
     fail('migration 0004 checksum drifted without migration-id correction')
 migration=read('src-tauri/src/infrastructure/sqlite/migration.rs')
-for token in ['CURRENT_SCHEMA_VERSION: u32 = 4','MIGRATION_V3_TO_V4_ID','MIGRATION_V3_TO_V4_SHA256','apply_v3_to_v4']:
+for token in ['MIGRATION_V3_TO_V4_ID','MIGRATION_V3_TO_V4_SHA256','apply_v3_to_v4']:
     if token not in migration: fail('migration engine v4 contract missing '+token)
+match=re.search(r'CURRENT_SCHEMA_VERSION: u32 = (\d+)', migration)
+if not match or int(match.group(1)) < 4: fail('migration engine regressed below schema v4')
 
 adapter=read('src-tauri/src/infrastructure/sqlite/sync.rs')
 for token in ['materialize_pending','sync_outbox','sync_seen_events','canonical_event_digest','ReplayConflict','record_local_event_versions','observe_remote_clock','apply_board_snapshot','blocked_markers','UnsupportedPendingKind','a10_materialized_local_version_beats_older_remote_event','a10_android_board_snapshot_fixture_seeds_empty_native_board_once','a10_relay_drop_reorder_replay_harness_converges']:
@@ -80,10 +85,11 @@ if crypto.get('formatVersion')!=1 or len(crypto.get('expectedBoardTag',''))<40 o
 if crypto.get('syntheticBoardKey')!='BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc':
     fail('crypto vector must stay explicitly synthetic/reproducible')
 
-plan=load('tools/uts_plan.json')
-if plan.get('schemaVersion')!=1 or plan.get('stage')!='A10': fail('UTS plan did not advance to A10')
+if plan.get('schemaVersion')!=1: fail('UTS plan schema drifted')
 ids=[x.get('id') for x in plan.get('deterministic',[])]
-if 'a10' not in ids or ids[-1]!='a10': fail('A10 deterministic gate missing/not last')
+if 'a10' not in ids: fail('A10 deterministic gate missing')
+if current_stage == 'A10' and ids[-1] != 'a10': fail('A10 must be last while stage A10 is current')
+if current_stage != 'A10' and ids.index('a10') >= len(ids)-1: fail('later stage must follow A10')
 probes={x.get('id'):' '.join(x.get('command',[])) for x in plan.get('host',{}).get('postBuildProbes',[])}
 if 'a10-sync-compatibility' not in probes or 'a10_' not in probes['a10-sync-compatibility']:
     fail('A10 host Cargo compatibility probe missing')
@@ -113,9 +119,17 @@ expected={
 }
 for key,value in expected.items():
     if anchors.get(key)!=value: fail('legacy/Android source anchor drifted: '+str(key))
+evolving_after_a10={
+    'src-tauri/Cargo.toml',
+    'src-tauri/src/infrastructure/sqlite/migration.rs',
+    'tools/check_a10.py',
+    'tools/uts_plan.json',
+}
 for item in ev['sources']:
     rel=item.get('path',''); expected_sha=item.get('sha256')
     if rel.startswith('/') or '..' in Path(rel).parts or not (ROOT/rel).is_file(): fail('unsafe/missing evidence source '+rel)
+    if current_stage != 'A10' and rel in evolving_after_a10:
+        continue
     if sha(rel)!=expected_sha: fail('evidence source digest drifted: '+rel)
 
 print('A10 sync-core + roaming compatibility: OK')

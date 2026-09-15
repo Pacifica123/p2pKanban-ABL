@@ -4,8 +4,8 @@ This file records implementation-time evidence that narrows or corrects the impo
 
 ## DEBT-A00-001 — devctl v0.7.0 cannot auto-reset a partially applied patch in a commitless repository
 
-**Classification:** [FACT] from attached `devctl.py` plus an A00 dry application test.  
-**Architecture impact:** delivery/precondition only; no native runtime ADR is changed.  
+**Classification:** [FACT] from attached `devctl.py` plus an A00 dry application test.
+**Architecture impact:** delivery/precondition only; no native runtime ADR is changed.
 **Status:** open tooling debt; safe operational precondition defined.
 
 The attached devctl v0.7.0 rollback path ultimately uses `git reset --hard HEAD`. In a Git repository with no commits, `HEAD` is unborn. If a patch has already copied files and then fails, the normal auto-reset cannot resolve `HEAD` and therefore cannot provide the advertised atomic rollback.
@@ -26,8 +26,8 @@ The patch must not change workspace policy or devctl itself. Therefore A00 recor
 
 ## DEBT-A01-001 — A01 build evidence requires a provisioned Linux host; generic devctl application must remain offline-safe
 
-**Classification:** [FACT] from the A01b construction environment and upstream Tauri Linux prerequisites.  
-**Architecture impact:** validation/environment only; ADR-001 remains unchanged.  
+**Classification:** [FACT] from the A01b construction environment and upstream Tauri Linux prerequisites.
+**Architecture impact:** validation/environment only; ADR-001 remains unchanged.
 **Status:** open acceptance evidence, bounded to A01c.
 
 The patch-construction environment does not contain Cargo/rustc or WebKitGTK development metadata and cannot reach external package/registry endpoints. Installing a hidden toolchain during `devctl start`, weakening checks to a source grep, or fabricating `Cargo.lock` would all violate the repository's evidence rules and unstable-network constraint.
@@ -36,8 +36,8 @@ A01b therefore adds a fail-closed offline host harness. Dependency/cache populat
 
 ## DEBT-A01-002 — A01a recorded an obsolete/incorrect Tauri Rust floor
 
-**Classification:** [FACT] from current upstream Tauri 2.11.5 workspace metadata, re-checked during A01c.  
-**Architecture impact:** build compatibility/evidence; ADR-001 process model is unchanged.  
+**Classification:** [FACT] from current upstream Tauri 2.11.5 workspace metadata, re-checked during A01c.
+**Architecture impact:** build compatibility/evidence; ADR-001 process model is unchanged.
 **Status:** source declaration corrected in A01c; host verification remains open in the canonical A02b UTS pipeline.
 
 A01a recorded `rust-version = 1.77.2` and described that value as the selected Tauri release's Rust floor. Current upstream Tauri 2.11.5 workspace metadata declares **Rust 1.90** via `rust-version = 1.90`, and the `tauri` 2.11.5 crate inherits that workspace value. A01c therefore changes the native package declaration to `1.90` and supersedes the A01a compatibility claim.
@@ -54,24 +54,24 @@ This changes the **blocking policy**, not the evidence claim: A01/A02 host resul
 
 ## CORR-A02-004 — Tauri context required an application icon that A01/A02 omitted
 
-**Classification:** [FACT] from the first real UTS `cargo test --locked --offline` on the A02 snapshot.  
-**Architecture impact:** packaging/build correctness only; no process, IPC, persistence or privilege ADR changes.  
+**Classification:** [FACT] from the first real UTS `cargo test --locked --offline` on the A02 snapshot.
+**Architecture impact:** packaging/build correctness only; no process, IPC, persistence or privilege ADR changes.
 **Status:** fixed in A02b; post-fix UTS compile/launch verification pending.
 
 `tauri::generate_context!()` failed before native tests could run because `src-tauri/icons/icon.png` was absent. This was a repository defect, not an unavailable-host limitation. A02b adds a repository-owned RGBA PNG and makes the icon path explicit in `tauri.conf.json` so the asset is part of the checked source contract rather than an undocumented Tauri default.
 
 ## CORR-A02-005 — Node `<23` build-time upper bound was unsupported by evidence
 
-**Classification:** [FACT] from the same UTS run: Node 26.8.1 completed `npm ci`, TypeScript typecheck and Vite production build, while npm only warned about the repository's declared engine range.  
-**Architecture impact:** build tooling only; the packaged desktop runtime still has no Node dependency.  
+**Classification:** [FACT] from the same UTS run: Node 26.8.1 completed `npm ci`, TypeScript typecheck and Vite production build, while npm only warned about the repository's declared engine range.
+**Architecture impact:** build tooling only; the packaged desktop runtime still has no Node dependency.
 **Status:** corrected in A02b.
 
 The earlier `>=20 <23` range was a conservative assumption without an implementation-driving compatibility reason. A02b removes the artificial upper bound and retains `>=20`. Future incompatibility must be based on an actual toolchain failure or upstream requirement, not an arbitrary major-version ceiling.
 
 ## DELIVERY-A02-006 — single-entry UTS verifier replaces per-patch manual command lists
 
-**Classification:** [PROPOSAL implemented as tooling contract], motivated by repeated host-only verification steps.  
-**Architecture impact:** verification workflow only.  
+**Classification:** [PROPOSAL implemented as tooling contract], motivated by repeated host-only verification steps.
+**Architecture impact:** verification workflow only.
 **Status:** implemented in A02b.
 
 `tools/uts_verify.py` is now the stable UTS entry point and `tools/uts_plan.json` is the evolving machine-readable plan. Patches update the plan as host checks change. The verifier is offline by default, may populate caches only with explicit `--allow-network`, continues through independent checks, and stores text/JSON/log evidence under ignored `.uts-reports/`.
@@ -80,8 +80,8 @@ This does not weaken `devctl`: generic patch checks remain deterministic/network
 
 ## CORR-A02-007 — deterministic hygiene confused repository content with ignored UTS build state
 
-**Classification:** [FACT] from two consecutive real UTS verifier runs after A02b.  
-**Architecture impact:** verification correctness only; no runtime ADR changes.  
+**Classification:** [FACT] from two consecutive real UTS verifier runs after A02b.
+**Architecture impact:** verification correctness only; no runtime ADR changes.
 **Status:** fixed in A02c.
 
 The first post-A02b UTS run passed completely and intentionally left ignored `dist/`, `node_modules/`, `src-tauri/target/` and a resolver-generated Cargo lock in the working tree. The immediate second invocation then failed A00 because `dist/` merely existed, caused A01 to recursively scan generated Cargo output until the process was killed, and caused A01b to reject the current Cargo lock because it hard-coded serialization format `version = 3`.
@@ -90,8 +90,8 @@ Deterministic source gates must answer “is forbidden/generated state owned by 
 
 ## DELIVERY-A02-008 — one UTS invocation must prove post-build repeatability
 
-**Classification:** [PROPOSAL implemented as verification tooling].  
-**Architecture impact:** verification workflow only.  
+**Classification:** [PROPOSAL implemented as verification tooling].
+**Architecture impact:** verification workflow only.
 **Status:** implemented in A02c.
 
 The canonical verifier now reruns the entire deterministic gate list after frontend/Cargo/runtime steps. This makes state-pollution bugs observable during the same invocation that created the state. The verifier does not use `git clean`, resets, or cache deletion to manufacture a pass.
@@ -107,8 +107,25 @@ The canonical verifier now reruns the entire deterministic gate list after front
 
 ## CORR-A10-001 — A09b exact getrandom 0.4.3 pin broke fresh-host offline re-resolution
 
-**Classification:** [FACT] from canonical A09b UTS on a different Arch-family machine.  
-**Architecture impact:** build/offline dependency resolution only; A09 secret-at-rest semantics and provider boundaries are unchanged.  
+**Classification:** [FACT] from canonical A09b UTS on a different Arch-family machine.
+**Architecture impact:** build/offline dependency resolution only; A09 secret-at-rest semantics and provider boundaries are unchanged.
 **Status:** corrected inside A10; no separate A09c stage.
 
 After network preparation, `cargo generate-lockfile --offline` selected `secret-service 5.2.0` against the locally cached `getrandom ^0.4` index line, where `0.4.2` was available, while the application still forced exact `getrandom 0.4.3`. The resulting resolver conflict blocked Cargo test/build even though deterministic/frontend checks were green. A10 aligns the direct pin to **getrandom 0.4.2** rather than weakening the offline re-resolution gate. `getrandom 0.4.2` remains the same 0.4 API line and satisfies `secret-service 5.2.0`'s `getrandom = "0.4"` dependency.
+
+
+## CORR-A11-001 — A10 exact serde 1.0.229 pin broke fresh-host offline re-resolution
+
+**Classification:** [FACT] from the canonical A10 UTS `cargo.lock.offline-recheck`.
+**Architecture impact:** dependency resolution only; sync/roaming and SecretVault semantics are unchanged.
+**Status:** corrected inside A11; no A10b/A09c stage.
+
+After explicit network refresh, the final mandatory `cargo generate-lockfile --offline` could resolve `secret-service ^1` only against the cached `serde 1.0.228` line while the native crate forced exact `serde 1.0.229`. A11 aligns the direct application pin to **serde 1.0.228**. The verifier is intentionally not weakened: offline lock re-resolution remains a release acceptance requirement.
+
+## DEBT-A11-002 — Secret Service and SQLite do not share an ACID transaction
+
+**Classification:** [FACT] from the platform/storage boundary.
+**Architecture impact:** import crash semantics.
+**Status:** bounded by fail-closed ordering and compensation; recovery/doctor hardening remains A16.
+
+A11 performs complete validation/preflight, refuses existing vault-key collisions, writes new vault material, then commits the imported graph in one `BEGIN IMMEDIATE` SQLite transaction. Failures after vault writes trigger best-effort deletion of only those new keys. A process crash in the narrow cross-resource window can leave an unreachable orphan vault secret, but not a committed board without its required key and not a partially committed planner graph. A16 recovery tooling may enumerate/clean such unreachable material without changing this security ordering.

@@ -190,6 +190,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the canonical UserTestSpace verification plan and keep all logs.")
     parser.add_argument("--allow-network", action="store_true", help="allow explicit npm/Cargo cache preparation; acceptance is rechecked offline")
     parser.add_argument("--no-runtime", action="store_true", help="skip GUI runtime launch probe but keep build/doctor checks")
+    parser.add_argument("--deterministic-only", action="store_true", help="run only deterministic A00..current-stage gates; skip host/frontend/Cargo/runtime phases")
     parser.add_argument("--report-dir", type=Path, help="override report directory (default: .uts-reports/<UTC timestamp>)")
     args = parser.parse_args()
 
@@ -204,6 +205,8 @@ def main() -> int:
 
     # Deterministic gates are independent and all run even if one fails.
     run_deterministic_phase(plan, report_dir, results, "deterministic.")
+    if args.deterministic_only:
+        return write_summary(plan, report_dir, results, args.allow_network)
 
     host = plan["host"]
     for step_id, key in (("host.build-doctor", "buildDoctor"), ("host.runtime-doctor", "runtimeDoctor")):

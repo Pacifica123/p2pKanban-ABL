@@ -5,6 +5,7 @@ mod infrastructure;
 mod navigation_policy;
 
 use application::{
+    import::ImportService,
     planner::{PlannerService, RandomPlannerIds},
     vault::VaultService,
     workspace::{RandomUuidGenerator, WorkspaceService},
@@ -15,7 +16,10 @@ use infrastructure::{
         secrets::bootstrap_vault,
         xdg::{DesktopPaths, XdgEnvironment},
     },
-    sqlite::{repository::SqlitePlannerRepository, workspace::SqliteWorkspaceCatalog},
+    sqlite::{
+        import::SqliteImportRepository, repository::SqlitePlannerRepository,
+        workspace::SqliteWorkspaceCatalog,
+    },
 };
 use tauri::{
     webview::{NewWindowResponse, WebviewWindowBuilder},
@@ -57,6 +61,9 @@ fn run() -> Result<(), String> {
         Box::new(RandomPlannerIds),
     );
     let vault_service = bootstrap_vault(&prepared.paths.profile, "default");
+    let import_repository = SqliteImportRepository::open(&prepared.paths.profile)
+        .map_err(|err| format!("unable to open durable import repository: {err:?}"))?;
+    let import_service = ImportService::new(Box::new(import_repository));
 
     let activation_receiver = primary.take_activation_receiver();
     let diagnostics = prepared.diagnostics();
@@ -68,6 +75,7 @@ fn run() -> Result<(), String> {
         .manage(workspace_service)
         .manage(planner_service)
         .manage(vault_service)
+        .manage(import_service)
         .invoke_handler(tauri::generate_handler![
             desktop_api::desktop_api_health,
             desktop_api::desktop_api_profile_diagnostics,

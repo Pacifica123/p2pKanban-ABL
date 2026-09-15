@@ -1,0 +1,114 @@
+{
+  "externalAnchors": [
+    {
+      "path": "backend/src/auth/device_link.rs",
+      "sha256": "a1a0dc326efeb32fa883d16559e5ebbec3a1e5982019d039e3d42945ca7b29e1",
+      "source": "web"
+    },
+    {
+      "path": "backend/src/modules/integrations/dto.rs",
+      "sha256": "958788ad02ebd741970705fde8e82ec8abdfd25b4a7b5cbdaf0152669f8a73a3",
+      "source": "web"
+    },
+    {
+      "path": "backend/src/modules/integrations/service.rs",
+      "sha256": "3883142c233fc55980a12a76feb9faa53e2a39ce8f34afa0db2f2d76110f7cd1",
+      "source": "web"
+    },
+    {
+      "path": "docs/architecture/import-export-backup-v1.md",
+      "sha256": "924696575804f06700e1661055cb989fe1cfaab52f9d6ee62897204c280e0383",
+      "source": "web"
+    },
+    {
+      "path": "docs/architecture/web-node-link-v1.md",
+      "sha256": "fbe0925b3a1fa6877d0277c72e58bb27cb5d0bb1106057657738b39959eb3c19",
+      "source": "web"
+    },
+    {
+      "path": "src/features/deviceLink/protocol.ts",
+      "sha256": "3a09b982f866975eeb80d3579258ca6093f2077e911e2012b21e71a074eb4d6b",
+      "source": "android"
+    },
+    {
+      "path": "src/features/deviceLink/service.ts",
+      "sha256": "4858d8447d90dd0833e6417e7e8e4da6bc6c4ca80b0b2833252ce079d84daa3a",
+      "source": "android"
+    },
+    {
+      "path": "src/features/deviceLink/snapshot.ts",
+      "sha256": "e70c73ba2c56fe7399feb34f70885e2db1a7f96e2ac75784271a9ca51a3b9bea",
+      "source": "android"
+    }
+  ],
+  "facts": [
+    "A10 UTS deterministic/frontend checks passed and the mandatory Cargo offline lock recheck failed because the direct serde 1.0.229 pin conflicted with the fresh-host offline serde 1.0.228 resolution line.",
+    "A11 changes only the direct serde compatibility pin to 1.0.228 and retains mandatory offline Cargo lock/fetch/test/build acceptance.",
+    "Schema v5 stores import receipts, principal identifiers, capability metadata and opaque portable JSON, but no device private key or board key bytes.",
+    "Portable bundle v1 is validated as board-scoped application state, requires an empty/fresh A11 migration destination, preserves stable logical UUIDs plus restoreHints/unknown metadata, and has a deterministic parse-export-parse compatibility test including exact non-null card archivedAt preservation.",
+    "Device-link/2 provisioning binds the grant scope/epoch/subject to a fresh native replica and vault-only board/device secret material.",
+    "Web-node-link v1 destination provisioning requires an empty native profile, binds capability subjects to the fresh native principal public key, and records omissions for deployment/session/device state, shared workspaces and node-local hides.",
+    "Import application uses one SQLite IMMEDIATE transaction and does not insert pending_local_changes.",
+    "The native runtime wires ImportService without adding a Tauri import/file/keyring command; the main WebView permission list stays empty."
+  ],
+  "formatVersion": 1,
+  "inferences": [
+    "Treating imported state as replica seed rather than a local mutation avoids echoing restored content through the A10 outbox path.",
+    "Vault-before-DB ordering plus collision rejection is the safer cross-resource failure direction because a crash can leave only unreachable secret material rather than an active board without its required key.",
+    "Preserving unknown portable sections and entity fields as validated JSON avoids silent data loss before A12 promotes more fields to first-class native entities.",
+    "For A11 migration, preserving stable logical UUIDs in a fresh profile is safer than interpreting restoreHints.create_copy as an ID-remap instruction because coexistence must not fork logical board identity; generic copy/restore UI semantics remain out of scope."
+  ],
+  "proposals": [
+    "A12 should consume the preserved label/comment/activity/appearance sections as first-class native parity data without changing A11 secret or import boundaries.",
+    "A16 recovery/doctor may detect and clean unreachable orphan vault material created by a process crash in the Secret Service-to-SQLite commit window."
+  ],
+  "sources": [
+    {
+      "path": "src-tauri/Cargo.toml",
+      "sha256": "aa0718ae679fc99390fe6369e6a7e7fd91a55cb77bfccc741a72629c5cd06782"
+    },
+    {
+      "path": "src-tauri/migrations/0005_import_link.sql",
+      "sha256": "f32f6c68584c4b43c06fd817bb567cce33064fdceb4dd8452f16249679a62726"
+    },
+    {
+      "path": "src-tauri/src/domain/import.rs",
+      "sha256": "b68f0b57d859311e3929fd7f9115545ba6021b9203f58857d6b87526b428fb99"
+    },
+    {
+      "path": "src-tauri/src/application/import.rs",
+      "sha256": "647c74291d0535bdd503797a356c93afc0c13c5248fc5961d7db09f21c4e6699"
+    },
+    {
+      "path": "src-tauri/src/infrastructure/sqlite/import.rs",
+      "sha256": "ad447ffb0f132e9f82b28e29328f48e0284107b2a8749d9fb5a36d896e4e7bea"
+    },
+    {
+      "path": "src-tauri/src/infrastructure/sqlite/migration.rs",
+      "sha256": "699388815aa0fa448240c363cb5fc3903c4d7af0e31f6926d3a3aca9e2941337"
+    },
+    {
+      "path": "src-tauri/src/main.rs",
+      "sha256": "9a9cc6e826ba375588392ab6ef59a79f92328ab553a428fb4f3a5e7db8487c30"
+    },
+    {
+      "path": "tools/check_a11.py",
+      "sha256": "b362aaee5bb7849b651bf79166d479d5845b4e3b5c978d5fdd90c8e3cbff1fbe"
+    },
+    {
+      "path": "tools/uts_plan.json",
+      "sha256": "b447474de7965bf206e44b4783131b0fcd77906ccc63a80a3cbd4fe73408a573"
+    },
+    {
+      "path": "docs/evidence/A11_DEVICE_LINK_IMPORT_MIGRATION.md",
+      "sha256": "ac85c43c3347b8fb2cc1f1920de0203122813fcf0d96f699cdf0f2abd8ef73e5"
+    }
+  ],
+  "stage": "A11",
+  "title": "device-link/2 + web-node-link/bundle import migration",
+  "unresolved": [
+    "Live Nostr signed-event verification, delegation-chain/chunk transport and relay lifecycle for device-link/2 are not implemented by this destination boundary.",
+    "Legacy web-node-link source HTTP/session acquisition is not implemented and must remain a native bounded adapter rather than WebView networking.",
+    "Cargo compile/test and the final fresh-host offline resolver acceptance require the user's Arch-family UTS because this construction environment has no Rust toolchain."
+  ]
+}

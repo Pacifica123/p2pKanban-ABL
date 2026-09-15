@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A10",
-  "description": "Canonical UserTestSpace verification through A10. A10 adds deterministic sync/1 + roaming/1 core, Android-compatible crypto/merge vectors, SQLite outbox/materialization and remote replay/tombstone/capability-epoch semantics; no relay coordinator or device-link import is claimed.",
+  "stage": "A11",
+  "description": "Canonical UserTestSpace verification through A11. A11 corrects the direct serde pin to 1.0.228 for fresh-host offline re-resolution, adds schema v5 import/link metadata, portable bundle v1 roundtrip/import, and Rust-only device-link/2 + web-node-link v1 destination provisioning behind SecretVault; no WebView secret/filesystem privilege or live relay/legacy-node transport is claimed.",
   "deterministic": [
     {
       "id": "a00",
@@ -161,6 +161,14 @@
         "python3",
         "-B",
         "tools/check_a10.py"
+      ]
+    },
+    {
+      "id": "a11",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a11.py"
       ]
     }
   ],
@@ -324,6 +332,20 @@
           "--",
           "--nocapture"
         ]
+      },
+      {
+        "id": "a11-import-compatibility",
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "src-tauri/Cargo.toml",
+          "--locked",
+          "--offline",
+          "a11_",
+          "--",
+          "--nocapture"
+        ]
       }
     ]
   },
@@ -340,6 +362,10 @@
     "A09 provider matrix across GNOME Secret Service, KWallet Secret Service compatibility and a minimal/no-provider session remains multi-host evidence; one UTS host does not prove the whole matrix",
     "A09 passphrase provider is implemented/tested in Rust but passphrase activation is intentionally not exposed as a generic WebView secret IPC before credential provisioning/onboarding exists",
     "A10: sync_outbox/merge/crypto are fixture- and Rust-test verified, but relay publish/pull orchestration is not implemented yet; do not treat pending/outbox rows as relay ACK or multi-node convergence evidence",
-    "A10 roaming/1 cannot represent post-snapshot column creation in the legacy Android protocol; such local markers fail closed instead of being silently dropped"
+    "A10 roaming/1 cannot represent post-snapshot column creation in the legacy Android protocol; such local markers fail closed instead of being silently dropped",
+    "A11: portable bundle import is a native application operation; no generic WebView filesystem/keyring command is introduced.",
+    "A11: device-link/2 and web-node-link v1 methods consume already authenticated/decrypted native transport results; live Nostr signature/chunk transport and legacy-node HTTP/session orchestration are not claimed by this stage.",
+    "A11: web-node-link v1 destination provisioning requires an empty native profile and reports omitted shared workspaces/node-local hides alongside excluded deployment/session state.",
+    "A11: final Cargo acceptance must still pass cargo generate-lockfile --offline after any explicit network preparation; serde 1.0.228 is the direct compatibility pin."
   ]
 }
