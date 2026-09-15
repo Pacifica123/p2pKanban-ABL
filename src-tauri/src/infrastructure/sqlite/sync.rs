@@ -295,6 +295,27 @@ fn checklist_item_payload(
     Ok((card_id, checklist_id, Value::Object(object)))
 }
 
+fn appearance_payload(
+    conn: &Connection,
+    board_id: &str,
+) -> Result<Value, SyncRepositoryError> {
+    let raw: Option<String> = conn
+        .query_row(
+            "SELECT settings_json FROM board_appearance_settings WHERE board_id = ?1",
+            [board_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(storage_failure)?;
+    let raw = raw.ok_or(SyncRepositoryError::InvalidEvent)?;
+    let value: Value = serde_json::from_str(&raw).map_err(storage_failure)?;
+    let object = value.as_object().ok_or(SyncRepositoryError::InvalidEvent)?;
+    if object.get("boardId").and_then(Value::as_str) != Some(board_id) {
+        return Err(SyncRepositoryError::ScopeMismatch);
+    }
+    Ok(value)
+}
+
 fn event(
     scope: &RoamingScope,
     event_id: String,
@@ -399,6 +420,18 @@ fn events_for_marker(
             }
             Ok(values)
         }
+        "board.appearance.put" => Ok(vec![event(
+            scope,
+            marker.id.clone(),
+            replica_id,
+            marker.sequence,
+            "board",
+            scope.board_id.clone(),
+            "board.appearance.put",
+            vec!["appearance"],
+            json!({"appearance": appearance_payload(tx, &scope.board_id)?}),
+            &occurred_at,
+        )]),
         "checklist.create" => {
             let (card_id, checklist) = checklist_payload(tx, &marker.entity_id, &occurred_at)?;
             Ok(vec![event(
@@ -631,6 +664,9 @@ fn record_local_event_versions(
                     save_version(tx, &scope.board_id, &event.entity_id, &field, &version)?;
                 }
             }
+        }
+        "board.appearance.put" => {
+            save_version(tx, &scope.board_id, &scope.board_id, "appearance", &version)?;
         }
         _ => {}
     }
@@ -955,6 +991,18 @@ fn apply_board_snapshot(
     }
     store_extension(tx, "board", &scope.board_id, board)?;
 
+    if let Some(appearance) = snapshot.get("appearance").and_then(Value::as_object) {
+        if appearance.get("boardId").and_then(Value::as_str) != Some(scope.board_id.as_str()) {
+            return Err(SyncRepositoryError::ScopeMismatch);
+        }
+        let settings_json = serde_json::to_string(&Value::Object(appearance.clone())).map_err(storage_failure)?;
+        tx.execute(
+            "INSERT INTO board_appearance_settings(board_id, settings_json, updated_at) VALUES (?1, ?2, ?3) ON CONFLICT(board_id) DO UPDATE SET settings_json=excluded.settings_json, updated_at=excluded.updated_at",
+            params![scope.board_id, settings_json, event.occurred_at],
+        ).map_err(storage_failure)?;
+        save_version(tx, &scope.board_id, &scope.board_id, "appearance", candidate)?;
+    }
+
     let columns = snapshot.get("columns").and_then(Value::as_array)
         .ok_or(SyncRepositoryError::InvalidEvent)?;
     for value in columns {
@@ -1054,6 +1102,33 @@ fn apply_board_snapshot(
             }
         }
     }
+    Ok(true)
+}
+
+fn apply_board_appearance(
+    tx: &Transaction<'_>,
+    scope: &RoamingScope,
+    event: &RoamingBoardEvent,
+    candidate: &VersionStamp,
+) -> Result<bool, SyncRepositoryError> {
+    if !event_wins(tx, &scope.board_id, &scope.board_id, "appearance", candidate)? {
+        return Ok(false);
+    }
+    let appearance = event
+        .payload
+        .get("appearance")
+        .and_then(Value::as_object)
+        .ok_or(SyncRepositoryError::InvalidEvent)?;
+    if appearance.get("boardId").and_then(Value::as_str) != Some(scope.board_id.as_str()) {
+        return Err(SyncRepositoryError::ScopeMismatch);
+    }
+    let settings_json = serde_json::to_string(&Value::Object(appearance.clone())).map_err(storage_failure)?;
+    tx.execute(
+        "INSERT INTO board_appearance_settings(board_id, settings_json, updated_at) VALUES (?1, ?2, ?3) ON CONFLICT(board_id) DO UPDATE SET settings_json=excluded.settings_json, updated_at=excluded.updated_at",
+        params![scope.board_id, settings_json, event.occurred_at],
+    )
+    .map_err(storage_failure)?;
+    save_version(tx, &scope.board_id, &scope.board_id, "appearance", candidate)?;
     Ok(true)
 }
 
@@ -1274,7 +1349,7 @@ impl SyncRepository for SqliteSyncRepository {
                 "card.delete"=>(apply_card_delete(&tx,scope,&event,&candidate)?,false),
                 "card.put"=>apply_card_put(&tx,scope,&event,&candidate)?,
                 "board.snapshot"=>(apply_board_snapshot(&tx,scope,&event,&candidate)?,false),
-                "board.appearance.put"=>(false,false),
+                "board.appearance.put"=>(apply_board_appearance(&tx,scope,&event,&candidate)?,false),
                 _=>return Err(SyncRepositoryError::InvalidEvent),
             };
             if changed { report.applied+=1; }
@@ -1341,6 +1416,33 @@ mod tests {
             assert_eq!(repo.list_outbox(&scope()).unwrap().len(),1);
         }
         cleanup(&layout);
+    }
+
+    #[test]
+    fn a12_appearance_pending_materializes_and_remote_apply_persists() {
+        let layout=temp_profile("appearance"); cleanup(&layout);
+        let mut repo=SqliteSyncRepository::open(&layout).unwrap(); seed(&repo);
+        repo.connection.execute(
+            "INSERT INTO board_appearance_settings(board_id,settings_json,updated_at) VALUES (?1,?2,'2026-09-15T00:00:00Z')",
+            params![scope().board_id, format!(r#"{{"boardId":"{}","accent":"violet"}}"#, scope().board_id)],
+        ).unwrap();
+        repo.connection.execute(
+            "INSERT INTO pending_local_changes(id,workspace_id,board_id,sequence,kind,entity_id,created_at_unix_ms) VALUES ('appearance-local',?1,?2,'11','board.appearance.put',?2,1789257600000)",
+            params![scope().workspace_id,scope().board_id],
+        ).unwrap();
+        let report=repo.materialize_pending(&scope()).unwrap();
+        assert_eq!(report.materialized_events,1);
+        let event=repo.list_outbox(&scope()).unwrap().into_iter().next().unwrap();
+        assert_eq!(event.operation,"board.appearance.put");
+        assert_eq!(event.payload["appearance"]["accent"],"violet");
+
+        let target_layout=temp_profile("appearance-target"); cleanup(&target_layout);
+        let mut target=SqliteSyncRepository::open(&target_layout).unwrap(); seed(&target);
+        let applied=target.apply_remote_batch(&scope(),&[event]).unwrap();
+        assert_eq!(applied.applied,1);
+        let stored:String=target.connection.query_row("SELECT settings_json FROM board_appearance_settings WHERE board_id=?1",[scope().board_id],|row|row.get(0)).unwrap();
+        assert!(stored.contains("violet"));
+        cleanup(&layout); cleanup(&target_layout);
     }
 
     #[test]

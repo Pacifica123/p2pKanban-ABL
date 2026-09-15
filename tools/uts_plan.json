@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A11",
-  "description": "Canonical UserTestSpace verification through A11. A11 corrects the direct serde pin to 1.0.228, and its explicit Cargo network-preparation path now generates the lock, fetches that exact locked graph, then deletes/regenerates Cargo.lock offline and requires byte-equivalence before offline fetch/test/build. A11 also adds schema v5 import/link metadata, portable bundle v1 roundtrip/import, and Rust-only device-link/2 + web-node-link v1 destination provisioning behind SecretVault; no WebView secret/filesystem privilege or live relay/legacy-node transport is claimed.",
+  "stage": "A12",
+  "description": "Canonical UserTestSpace verification through A12. A12 adds schema v6 first-class labels/card-labels/comments/activity/appearance parity. Label/comment mutations are durable but explicitly recorded as roaming-v1-unsupported instead of being fed into A10 roaming; board appearance reuses the proven board.appearance.put path. A11 portable parity sections materialize without local mutation markers. WebView remains permission-minimal. Cargo network preparation/offline byte-equivalent lock re-resolution remains unchanged and mandatory.",
   "deterministic": [
     {
       "id": "a00",
@@ -169,6 +169,14 @@
         "python3",
         "-B",
         "tools/check_a11.py"
+      ]
+    },
+    {
+      "id": "a12",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a12.py"
       ]
     }
   ],
@@ -346,6 +354,20 @@
           "--",
           "--nocapture"
         ]
+      },
+      {
+        "id": "a12-parity-compatibility",
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "src-tauri/Cargo.toml",
+          "--locked",
+          "--offline",
+          "a12_",
+          "--",
+          "--nocapture"
+        ]
       }
     ]
   },
@@ -366,6 +388,10 @@
     "A11: portable bundle import is a native application operation; no generic WebView filesystem/keyring command is introduced.",
     "A11: device-link/2 and web-node-link v1 methods consume already authenticated/decrypted native transport results; live Nostr signature/chunk transport and legacy-node HTTP/session orchestration are not claimed by this stage.",
     "A11: web-node-link v1 destination provisioning requires an empty native profile and reports omitted shared workspaces/node-local hides alongside excluded deployment/session state.",
-    "A11: if Cargo needs explicit network preparation, the verifier must fetch the exact network-generated locked graph first, then delete/regenerate Cargo.lock offline, require byte-identical lock output, and continue with locked offline fetch/test/build; serde 1.0.228 remains the direct compatibility pin."
+    "A11: if Cargo needs explicit network preparation, the verifier must fetch the exact network-generated locked graph first, then delete/regenerate Cargo.lock offline, require byte-identical lock output, and continue with locked offline fetch/test/build; serde 1.0.228 remains the direct compatibility pin.",
+    "A12 UI: create a label, assign/unassign it to a card, create/delete a comment, close/reopen, and confirm durable local state plus activity provenance.",
+    "A12 UI: confirm label/comment mutations increase the separate roaming/1 unsupported parity counter and are not presented as remotely converged.",
+    "A12 UI: save valid board appearance JSON, close/reopen, confirm it persists, and confirm the normal A10 pending counter reflects the roaming-capable appearance mutation.",
+    "A12 compatibility: label/comment roaming is intentionally not claimed until a versioned wire operation exists; appearance uses the existing board.appearance.put family with the A12 normalized payload mapping."
   ]
 }

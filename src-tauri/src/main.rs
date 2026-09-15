@@ -6,6 +6,7 @@ mod navigation_policy;
 
 use application::{
     import::ImportService,
+    parity::{ParityService, RandomParityIds},
     planner::{PlannerService, RandomPlannerIds},
     workspace::{RandomUuidGenerator, WorkspaceService},
 };
@@ -16,8 +17,8 @@ use infrastructure::{
         xdg::{DesktopPaths, XdgEnvironment},
     },
     sqlite::{
-        import::SqliteImportRepository, repository::SqlitePlannerRepository,
-        workspace::SqliteWorkspaceCatalog,
+        import::SqliteImportRepository, parity::SqliteParityRepository,
+        repository::SqlitePlannerRepository, workspace::SqliteWorkspaceCatalog,
     },
 };
 use tauri::{
@@ -63,6 +64,12 @@ fn run() -> Result<(), String> {
     let import_repository = SqliteImportRepository::open(&prepared.paths.profile)
         .map_err(|err| format!("unable to open durable import repository: {err:?}"))?;
     let import_service = ImportService::new(Box::new(import_repository));
+    let parity_repository = SqliteParityRepository::open(&prepared.paths.profile)
+        .map_err(|err| format!("unable to open durable parity repository: {err:?}"))?;
+    let parity_service = ParityService::new(
+        Box::new(parity_repository),
+        Box::new(RandomParityIds),
+    );
 
     let activation_receiver = primary.take_activation_receiver();
     let diagnostics = prepared.diagnostics();
@@ -75,6 +82,7 @@ fn run() -> Result<(), String> {
         .manage(planner_service)
         .manage(vault_service)
         .manage(import_service)
+        .manage(parity_service)
         .invoke_handler(tauri::generate_handler![
             desktop_api::desktop_api_health,
             desktop_api::desktop_api_profile_diagnostics,
@@ -99,7 +107,19 @@ fn run() -> Result<(), String> {
             desktop_api::desktop_api_create_checklist_item,
             desktop_api::desktop_api_set_checklist_item_done,
             desktop_api::desktop_api_delete_checklist_item,
-            desktop_api::desktop_api_pending_change_count
+            desktop_api::desktop_api_pending_change_count,
+            desktop_api::desktop_api_list_labels,
+            desktop_api::desktop_api_create_label,
+            desktop_api::desktop_api_delete_label,
+            desktop_api::desktop_api_list_card_label_ids,
+            desktop_api::desktop_api_set_card_label,
+            desktop_api::desktop_api_list_comments,
+            desktop_api::desktop_api_create_comment,
+            desktop_api::desktop_api_delete_comment,
+            desktop_api::desktop_api_get_appearance,
+            desktop_api::desktop_api_set_appearance,
+            desktop_api::desktop_api_list_activity,
+            desktop_api::desktop_api_unsynced_parity_count
         ])
         .setup(move |app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))

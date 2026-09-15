@@ -94,9 +94,6 @@ if sha("src-tauri/migrations/0005_import_link.sql") != "f32f6c68584c4b43c06fd817
 
 migration = read("src-tauri/src/infrastructure/sqlite/migration.rs")
 for token in [
-    "CURRENT_SCHEMA_VERSION: u32 = 5",
-    "MIN_READER_SCHEMA_VERSION: u32 = 5",
-    "MIN_WRITER_SCHEMA_VERSION: u32 = 5",
     "MIGRATION_V4_TO_V5_ID",
     "MIGRATION_V4_TO_V5_SHA256",
     "apply_v4_to_v5",
@@ -104,6 +101,13 @@ for token in [
 ]:
     if token not in migration:
         fail("migration engine v5 contract missing " + token)
+current_match = re.search(r"CURRENT_SCHEMA_VERSION: u32 = (\d+)", migration)
+reader_match = re.search(r"MIN_READER_SCHEMA_VERSION: u32 = (\d+)", migration)
+writer_match = re.search(r"MIN_WRITER_SCHEMA_VERSION: u32 = (\d+)", migration)
+if not current_match or int(current_match.group(1)) < 5:
+    fail("migration engine regressed below A11 schema v5")
+if not reader_match or int(reader_match.group(1)) < 5 or not writer_match or int(writer_match.group(1)) < 5:
+    fail("reader/writer schema contract regressed below A11")
 if "f32f6c68584c4b43c06fd817bb567cce33064fdceb4dd8452f16249679a62726" not in migration:
     fail("migration engine does not lock the exact 0005 checksum")
 
@@ -275,10 +279,12 @@ if manifest.get("includesLocalMetadata") is not False:
 # Single-entry UTS must now cover A00..A11 while preserving the mandatory
 # offline lock/fetch/test/build acceptance.
 plan = load("tools/uts_plan.json")
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A11":
-    fail("UTS plan did not advance to A11")
+stage = str(plan.get("stage", ""))
+stage_match = re.fullmatch(r"A(\d+)", stage)
+if plan.get("schemaVersion") != 1 or not stage_match or int(stage_match.group(1)) < 11:
+    fail("UTS plan regressed below A11")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
-if not ids or ids[-1] != "a11" or "a10" not in ids or ids.index("a10") >= ids.index("a11"):
+if "a11" not in ids or "a10" not in ids or ids.index("a10") >= ids.index("a11"):
     fail("A11 deterministic gate missing/not ordered after A10")
 lock_offline = " ".join(plan.get("cargo", {}).get("lockOffline", []))
 fetch_offline = " ".join(plan.get("cargo", {}).get("fetchOffline", []))
@@ -313,11 +319,11 @@ if verify.index('"cargo.lock.network-fetch"') > verify.index('"cargo.lock.offlin
     fail("Cargo cache population must happen before mandatory offline lock re-resolution")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "A11 device-link/2 + web-node-link/bundle migration" not in status or "canonical Cargo/offline UTS pending" not in status:
-    fail("A11 status ledger missing/premature")
+if "A11 device-link/2 + web-node-link/bundle migration" not in status:
+    fail("A11 status ledger missing")
 next_sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A12 — labels/comments/activity/appearance parity" not in next_sequence:
-    fail("next stage after A11 is not A12 parity")
+if "A12" not in next_sequence or "labels/comments/activity/appearance parity" not in next_sequence:
+    fail("A12 parity sequence provenance missing")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
 for token in ["CORR-A11-001", "CORR-A11-002", "CORR-A11-003", "serde 1.0.228", "no A10b/A09c", "network-fetch", "DEBT-A11-002", "BEGIN IMMEDIATE"]:
     if token not in debt:
@@ -339,7 +345,12 @@ for item in evidence.get("sources", []):
     path = ROOT / rel
     if not path.is_file():
         fail("missing A11 evidence source " + rel)
-    if sha(rel) != expected:
-        fail("A11 evidence source digest drifted: " + rel)
+    if not re.fullmatch(r"[0-9a-f]{64}", expected):
+        fail("invalid historical A11 evidence digest: " + rel)
+    # Historical evidence binds the exact A11 snapshot. Later Axx stages may
+    # legitimately evolve shared integration files while A11 semantic guards above
+    # remain mandatory. Only demand byte identity while A11 is the current stage.
+    if stage == "A11" and sha(rel) != expected:
+        fail("A11 evidence source digest drifted during A11: " + rel)
 
 print("A11 device-link/2 + web-node-link/bundle import migration: OK")

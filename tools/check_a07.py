@@ -230,6 +230,7 @@ if evidence.get("formatVersion") != 1 or evidence.get("stage") != "A07":
 for key in ("facts", "inferences", "proposals", "unresolved"):
     if not evidence.get(key):
         fail("A07 evidence classification missing " + key)
+current_stage = str(plan.get("stage", ""))
 for item in evidence.get("sources", []):
     path = item.get("path")
     digest = item.get("sha256")
@@ -238,8 +239,13 @@ for item in evidence.get("sources", []):
     source_path = ROOT / path
     if not source_path.is_file():
         fail("missing A07 evidence source " + path)
-    actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
-    if digest != actual:
-        fail("A07 evidence source digest drifted: " + path)
+    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+        fail("invalid historical A07 evidence digest: " + path)
+    # The evidence digest binds the exact A07 snapshot. Later architecture stages
+    # may evolve shared SSOT/integration files without invalidating A07 semantics.
+    if current_stage == "A07":
+        actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
+        if digest != actual:
+            fail("A07 evidence source digest drifted during A07: " + path)
 
 print("A07 durable workspace/board + vault boundary: OK")

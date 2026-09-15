@@ -69,3 +69,42 @@ export interface ChecklistItemSummary {
 export interface PendingChangeCount {
   count: string;
 }
+
+export interface LabelSummary {
+  id: string;
+  boardId: string;
+  name: string;
+  color: string;
+  position: string;
+}
+
+export interface CommentSummary {
+  id: string;
+  cardId: string;
+  authorUserId: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppearanceSummary {
+  boardId: string;
+  settingsJson: string;
+  updatedAt: string;
+}
+
+export interface ActivitySummary {
+  id: string;
+  boardId: string;
+  cardId: string;
+  actorUserId: string;
+  kind: string;
+  entityType: string;
+  entityId: string;
+  payloadJson: string;
+  occurredAt: string;
+}
+
+export interface ParityUnsyncedCount {
+  count: string;
+}

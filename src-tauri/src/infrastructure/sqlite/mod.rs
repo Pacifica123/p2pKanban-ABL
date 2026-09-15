@@ -3,3 +3,4 @@ pub(crate) mod import;
 pub(crate) mod repository;
 pub(crate) mod workspace;
 pub(crate) mod sync;
+pub(crate) mod parity;

@@ -4,6 +4,7 @@ use tauri::State;
 
 use crate::{
     application::{
+        parity::{ActivityView, AppearanceView, CommentView, LabelView, ParityService, ParityServiceError},
         planner::{
             CardView, ChecklistItemView, ChecklistView, ColumnView, PlannerService, PlannerServiceError,
         },
@@ -93,6 +94,71 @@ fn checklist_item_to_wire(view: ChecklistItemView) -> BTreeMap<&'static str, Str
         ("position", view.position.to_string()),
         ("isDone", view.is_done.to_string()),
     ])
+}
+
+
+fn label_to_wire(view: LabelView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("id", view.id),
+        ("boardId", view.board_id),
+        ("name", view.name),
+        ("color", view.color.unwrap_or_default()),
+        ("position", view.position.to_string()),
+    ])
+}
+
+fn comment_to_wire(view: CommentView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("id", view.id),
+        ("cardId", view.card_id),
+        ("authorUserId", view.author_user_id.unwrap_or_default()),
+        ("body", view.body),
+        ("createdAt", view.created_at),
+        ("updatedAt", view.updated_at),
+    ])
+}
+
+fn appearance_to_wire(view: AppearanceView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("boardId", view.board_id),
+        ("settingsJson", view.settings_json),
+        ("updatedAt", view.updated_at),
+    ])
+}
+
+fn activity_to_wire(view: ActivityView) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("id", view.id),
+        ("boardId", view.board_id),
+        ("cardId", view.card_id.unwrap_or_default()),
+        ("actorUserId", view.actor_user_id.unwrap_or_default()),
+        ("kind", view.kind),
+        ("entityType", view.entity_type),
+        ("entityId", view.entity_id.unwrap_or_default()),
+        ("payloadJson", view.payload_json),
+        ("occurredAt", view.occurred_at),
+    ])
+}
+
+fn parity_error_code(error: ParityServiceError) -> String {
+    match error {
+        ParityServiceError::InvalidId => "INVALID_ID",
+        ParityServiceError::EmptyValue => "VALUE_REQUIRED",
+        ParityServiceError::ValueTooLong => "VALUE_TOO_LONG",
+        ParityServiceError::InvalidJson => "INVALID_JSON",
+        ParityServiceError::RepositoryPoisoned => "PARITY_SERVICE_UNAVAILABLE",
+        ParityServiceError::Repository(inner) => match inner {
+            crate::application::parity::ParityRepositoryError::WorkspaceNotFound => "WORKSPACE_NOT_FOUND",
+            crate::application::parity::ParityRepositoryError::BoardNotFound => "BOARD_NOT_FOUND",
+            crate::application::parity::ParityRepositoryError::CardNotFound => "CARD_NOT_FOUND",
+            crate::application::parity::ParityRepositoryError::LabelNotFound => "LABEL_NOT_FOUND",
+            crate::application::parity::ParityRepositoryError::CommentNotFound => "COMMENT_NOT_FOUND",
+            crate::application::parity::ParityRepositoryError::ScopeMismatch => "SCOPE_MISMATCH",
+            crate::application::parity::ParityRepositoryError::DuplicateLabel => "LABEL_ALREADY_EXISTS",
+            crate::application::parity::ParityRepositoryError::DuplicateComment => "COMMENT_ALREADY_EXISTS",
+            crate::application::parity::ParityRepositoryError::StorageFailure => "PARITY_STORAGE_FAILURE",
+        },
+    }.to_owned()
 }
 
 fn planner_error_code(error: PlannerServiceError) -> String {
@@ -450,6 +516,79 @@ pub fn desktop_api_pending_change_count(
         .pending_change_count(&workspaceId, &boardId)
         .map(|count| BTreeMap::from([("count", count.to_string())]))
         .map_err(planner_error_code)
+}
+
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_labels(workspaceId:String, boardId:String, parity:State<'_,ParityService>) -> Result<Vec<BTreeMap<&'static str,String>>,String> {
+    parity.list_labels(&workspaceId,&boardId).map(|items|items.into_iter().map(label_to_wire).collect()).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_create_label(workspaceId:String, boardId:String, name:String, color:Option<String>, parity:State<'_,ParityService>) -> Result<BTreeMap<&'static str,String>,String> {
+    parity.create_label(&workspaceId,&boardId,&name,color.as_deref()).map(label_to_wire).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_delete_label(workspaceId:String, boardId:String, labelId:String, parity:State<'_,ParityService>) -> Result<(),String> {
+    parity.delete_label(&workspaceId,&boardId,&labelId).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_card_label_ids(workspaceId:String, cardId:String, parity:State<'_,ParityService>) -> Result<Vec<String>,String> {
+    parity.list_card_label_ids(&workspaceId,&cardId).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_set_card_label(workspaceId:String, cardId:String, labelId:String, assigned:bool, parity:State<'_,ParityService>) -> Result<(),String> {
+    parity.set_card_label(&workspaceId,&cardId,&labelId,assigned).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_comments(workspaceId:String, cardId:String, parity:State<'_,ParityService>) -> Result<Vec<BTreeMap<&'static str,String>>,String> {
+    parity.list_comments(&workspaceId,&cardId).map(|items|items.into_iter().map(comment_to_wire).collect()).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_create_comment(workspaceId:String, cardId:String, body:String, parity:State<'_,ParityService>) -> Result<BTreeMap<&'static str,String>,String> {
+    parity.create_comment(&workspaceId,&cardId,&body).map(comment_to_wire).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_delete_comment(workspaceId:String, commentId:String, parity:State<'_,ParityService>) -> Result<(),String> {
+    parity.delete_comment(&workspaceId,&commentId).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_get_appearance(workspaceId:String, boardId:String, parity:State<'_,ParityService>) -> Result<BTreeMap<&'static str,String>,String> {
+    parity.get_appearance(&workspaceId,&boardId).map(appearance_to_wire).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_set_appearance(workspaceId:String, boardId:String, settingsJson:String, parity:State<'_,ParityService>) -> Result<BTreeMap<&'static str,String>,String> {
+    parity.set_appearance(&workspaceId,&boardId,&settingsJson).map(appearance_to_wire).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_list_activity(workspaceId:String, boardId:String, limit:usize, parity:State<'_,ParityService>) -> Result<Vec<BTreeMap<&'static str,String>>,String> {
+    parity.list_activity(&workspaceId,&boardId,limit).map(|items|items.into_iter().map(activity_to_wire).collect()).map_err(parity_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_unsynced_parity_count(workspaceId:String, boardId:String, parity:State<'_,ParityService>) -> Result<BTreeMap<&'static str,String>,String> {
+    parity.unsynced_parity_count(&workspaceId,&boardId).map(|count|BTreeMap::from([("count",count.to_string())])).map_err(parity_error_code)
 }
 
 #[cfg(test)]

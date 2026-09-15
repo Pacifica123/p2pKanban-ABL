@@ -23,24 +23,50 @@ import {
   listColumns,
   moveCard,
   setCardArchived,
-  swapCardOrder,
   setChecklistItemDone,
+  swapCardOrder,
 } from './features/planner/api/planner';
+import {
+  createComment,
+  createLabel,
+  deleteComment,
+  deleteLabel,
+  getAppearance,
+  getUnsyncedParityCount,
+  listActivity,
+  listCardLabelIds,
+  listComments,
+  listLabels,
+  setAppearance,
+  setCardLabel,
+} from './features/parity/api/parity';
 import { getBackendVersion } from './features/system/api/version';
 import { getApiTransportKind } from './shared/api/client';
 import type {
+  ActivitySummary,
+  AppearanceSummary,
   BackendVersion,
   BoardSummary,
   CardSummary,
   ChecklistItemSummary,
   ChecklistSummary,
   ColumnSummary,
+  CommentSummary,
+  LabelSummary,
   VaultStatus,
   WorkspaceSummary,
 } from './shared/api/types';
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : 'Native operation failed';
+}
+
+function prettyJson(value: string): string {
+  try {
+    return JSON.stringify(JSON.parse(value) as unknown, null, 2);
+  } catch {
+    return value;
+  }
 }
 
 export default function App() {
@@ -55,7 +81,13 @@ export default function App() {
   const [selectedCard, setSelectedCard] = useState<CardSummary | null>(null);
   const [checklists, setChecklists] = useState<ChecklistSummary[]>([]);
   const [checklistItems, setChecklistItems] = useState<Record<string, ChecklistItemSummary[]>>({});
+  const [labels, setLabels] = useState<LabelSummary[]>([]);
+  const [cardLabelIds, setCardLabelIds] = useState<string[]>([]);
+  const [comments, setComments] = useState<CommentSummary[]>([]);
+  const [appearance, setAppearanceValue] = useState<AppearanceSummary | null>(null);
+  const [activity, setActivity] = useState<ActivitySummary[]>([]);
   const [pendingCount, setPendingCount] = useState('0');
+  const [unsyncedParityCount, setUnsyncedParityCount] = useState('0');
   const [showArchived, setShowArchived] = useState(false);
   const [workspaceTitle, setWorkspaceTitle] = useState('');
   const [boardTitle, setBoardTitle] = useState('');
@@ -64,6 +96,10 @@ export default function App() {
   const [cardColumnId, setCardColumnId] = useState('');
   const [checklistTitle, setChecklistTitle] = useState('');
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({});
+  const [labelName, setLabelName] = useState('');
+  const [labelColor, setLabelColor] = useState('');
+  const [commentDraft, setCommentDraft] = useState('');
+  const [appearanceDraft, setAppearanceDraft] = useState('{}');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,14 +112,26 @@ export default function App() {
       .catch((reason: unknown) => setError(message(reason)));
   }, []);
 
-  async function chooseWorkspace(workspace: WorkspaceSummary): Promise<void> {
-    setError(null);
+  function clearBoardState(): void {
     setOpenedBoard(null);
     setColumns([]);
     setCards([]);
     setSelectedCard(null);
     setChecklists([]);
     setChecklistItems({});
+    setLabels([]);
+    setCardLabelIds([]);
+    setComments([]);
+    setAppearanceValue(null);
+    setAppearanceDraft('{}');
+    setActivity([]);
+    setPendingCount('0');
+    setUnsyncedParityCount('0');
+  }
+
+  async function chooseWorkspace(workspace: WorkspaceSummary): Promise<void> {
+    setError(null);
+    clearBoardState();
     setSelectedWorkspace(workspace);
     try {
       setBoards(await listBoards(workspace.id));
@@ -93,13 +141,19 @@ export default function App() {
   }
 
   async function loadCardDetails(workspaceId: string, card: CardSummary): Promise<void> {
-    const lists = await listChecklists(workspaceId, card.id);
+    const [lists, labelIds, commentValues] = await Promise.all([
+      listChecklists(workspaceId, card.id),
+      listCardLabelIds(workspaceId, card.id),
+      listComments(workspaceId, card.id),
+    ]);
     const itemPairs = await Promise.all(
       lists.map(async (checklist) => [checklist.id, await listChecklistItems(workspaceId, checklist.id)] as const),
     );
     setSelectedCard(card);
     setChecklists(lists);
     setChecklistItems(Object.fromEntries(itemPairs));
+    setCardLabelIds(labelIds);
+    setComments(commentValues);
   }
 
   async function loadBoard(
@@ -107,14 +161,23 @@ export default function App() {
     board: BoardSummary,
     includeArchived = showArchived,
   ): Promise<void> {
-    const [columnValues, cardValues, pending] = await Promise.all([
+    const [columnValues, cardValues, pending, labelValues, appearanceValue, activityValues, unsynced] = await Promise.all([
       listColumns(workspace.id, board.id),
       listCards(workspace.id, board.id, includeArchived),
       getPendingChangeCount(workspace.id, board.id),
+      listLabels(workspace.id, board.id),
+      getAppearance(workspace.id, board.id),
+      listActivity(workspace.id, board.id, 50),
+      getUnsyncedParityCount(workspace.id, board.id),
     ]);
     setColumns(columnValues);
     setCards(cardValues);
     setPendingCount(pending.count);
+    setLabels(labelValues);
+    setAppearanceValue(appearanceValue);
+    setAppearanceDraft(prettyJson(appearanceValue.settingsJson));
+    setActivity(activityValues);
+    setUnsyncedParityCount(unsynced.count);
     setCardColumnId((current) => current || columnValues[0]?.id || '');
     if (selectedCard) {
       const fresh = cardValues.find((card) => card.id === selectedCard.id);
@@ -123,6 +186,8 @@ export default function App() {
         setSelectedCard(null);
         setChecklists([]);
         setChecklistItems({});
+        setCardLabelIds([]);
+        setComments([]);
       }
     }
   }
@@ -136,6 +201,8 @@ export default function App() {
       setSelectedCard(null);
       setChecklists([]);
       setChecklistItems({});
+      setCardLabelIds([]);
+      setComments([]);
       await loadBoard(selectedWorkspace, opened);
     } catch (reason) {
       setError(message(reason));
@@ -252,18 +319,93 @@ export default function App() {
     }
   }
 
+  async function submitLabel(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (!selectedWorkspace || !openedBoard) return;
+    setError(null);
+    try {
+      await createLabel(selectedWorkspace.id, openedBoard.id, labelName, labelColor);
+      setLabelName('');
+      setLabelColor('');
+      await refreshBoard();
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function removeLabel(labelId: string): Promise<void> {
+    if (!selectedWorkspace || !openedBoard) return;
+    setError(null);
+    try {
+      await deleteLabel(selectedWorkspace.id, openedBoard.id, labelId);
+      await refreshBoard();
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function toggleCardLabel(labelId: string, assigned: boolean): Promise<void> {
+    if (!selectedWorkspace || !selectedCard) return;
+    setError(null);
+    try {
+      await setCardLabel(selectedWorkspace.id, selectedCard.id, labelId, assigned);
+      await refreshBoard();
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function submitComment(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (!selectedWorkspace || !selectedCard) return;
+    setError(null);
+    try {
+      await createComment(selectedWorkspace.id, selectedCard.id, commentDraft);
+      setCommentDraft('');
+      await refreshBoard();
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function removeComment(commentId: string): Promise<void> {
+    if (!selectedWorkspace) return;
+    setError(null);
+    try {
+      await deleteComment(selectedWorkspace.id, commentId);
+      await refreshBoard();
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function submitAppearance(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (!selectedWorkspace || !openedBoard) return;
+    setError(null);
+    try {
+      const value = await setAppearance(selectedWorkspace.id, openedBoard.id, appearanceDraft);
+      setAppearanceValue(value);
+      setAppearanceDraft(prettyJson(value.settingsJson));
+      await refreshBoard();
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
   return (
     <main className="app-shell" aria-labelledby="app-title">
       <header className="topbar">
         <div>
-          <p className="eyebrow">ARCH NATIVE · A09 SECURE LOCAL-FIRST</p>
+          <p className="eyebrow">ARCH NATIVE · A12 PARITY SURFACE</p>
           <h1 id="app-title">p2pKanban</h1>
         </div>
         <div className="status-stack" aria-live="polite">
           <span>mode: <strong>{getApiTransportKind()}</strong></span>
           <span>{health ? `${health.service} ${health.version} · ${health.status}` : 'native IPC…'}</span>
           <span>vault: <strong>{vault?.mode ?? 'checking'}</strong>{vault ? ` · ${vault.state} · durable secrets ${vault.durable === 'true' ? 'enabled' : 'disabled'}` : ''}</span>
-          <span>local pending changes: <strong>{pendingCount}</strong></span>
+          <span>roaming-capable pending: <strong>{pendingCount}</strong></span>
+          <span>roaming/1 unsupported parity changes: <strong>{unsyncedParityCount}</strong></span>
         </div>
       </header>
 
@@ -310,7 +452,10 @@ export default function App() {
           ) : (
             <>
               <div className="board-heading">
-                <div><h2>{openedBoard.title}</h2><p className="lede">Cards and checklists commit to SQLite locally. Pending markers are durable but are not claimed as remotely converged until A10.</p></div>
+                <div>
+                  <h2>{openedBoard.title}</h2>
+                  <p className="lede">Planner data and A12 parity data are durable in SQLite. Appearance uses the existing roaming/1 appearance operation; label/comment mutations remain explicit local-only parity changes until a compatible wire operation exists.</p>
+                </div>
                 <label className="toggle"><input type="checkbox" checked={showArchived} onChange={(event) => { const includeArchived = event.target.checked; setShowArchived(includeArchived); void refreshBoard(includeArchived); }} /> show archived</label>
               </div>
 
@@ -327,6 +472,50 @@ export default function App() {
                   <button disabled={!cardColumnId} type="submit">Add card</button>
                 </form>
               </div>
+
+              <section className="parity-grid" aria-label="Board parity controls">
+                <section className="parity-card">
+                  <div className="section-heading"><div><p className="kicker">Labels</p><h3>Board labels</h3></div><span className="count">{labels.length}</span></div>
+                  <form className="create-row label-create" onSubmit={(event) => void submitLabel(event)}>
+                    <input aria-label="Label name" maxLength={120} placeholder="Label name" value={labelName} onChange={(event) => setLabelName(event.target.value)} />
+                    <input aria-label="Label color token" maxLength={128} placeholder="Color/token" value={labelColor} onChange={(event) => setLabelColor(event.target.value)} />
+                    <button type="submit">Add</button>
+                  </form>
+                  <div className="label-list">
+                    {labels.length === 0 ? <p className="empty">No labels.</p> : null}
+                    {labels.map((label) => (
+                      <span className="label-chip" key={label.id} title={label.color || 'no color token'}>
+                        <span>{label.name}</span>
+                        <button className="link danger" type="button" onClick={() => void removeLabel(label.id)} aria-label={`Delete label ${label.name}`}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="constraint-note">Label CRUD is durable and audited locally; roaming/1 has no label mutation operation, so changes are counted in the unsupported parity ledger instead of being silently dropped.</p>
+                </section>
+
+                <section className="parity-card">
+                  <div className="section-heading"><div><p className="kicker">Appearance</p><h3>Board appearance JSON</h3></div><span className="count">roaming/1</span></div>
+                  <form className="appearance-form" onSubmit={(event) => void submitAppearance(event)}>
+                    <textarea aria-label="Board appearance JSON" rows={7} value={appearanceDraft} onChange={(event) => setAppearanceDraft(event.target.value)} />
+                    <div className="appearance-meta"><small>{appearance?.updatedAt ? `updated ${appearance.updatedAt}` : 'default appearance'}</small><button type="submit">Save appearance</button></div>
+                  </form>
+                  <p className="constraint-note">The native service normalizes <code>boardId</code>; appearance uses the already proven <code>board.appearance.put</code> path.</p>
+                </section>
+
+                <section className="parity-card activity-card">
+                  <div className="section-heading"><div><p className="kicker">Activity</p><h3>Local provenance</h3></div><span className="count">{activity.length}</span></div>
+                  <div className="activity-list">
+                    {activity.length === 0 ? <p className="empty">No activity yet. A12 does not fabricate historical entries.</p> : null}
+                    {activity.map((entry) => (
+                      <article className="activity-entry" key={entry.id}>
+                        <strong>{entry.kind}</strong>
+                        <span>{entry.entityType}{entry.entityId ? ` · ${entry.entityId}` : ''}</span>
+                        <time>{entry.occurredAt}</time>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </section>
 
               {columns.length === 0 ? <p className="empty">Create the first column to start the offline planner.</p> : null}
               <div className="kanban-columns">
@@ -358,6 +547,39 @@ export default function App() {
                 {selectedCard ? (
                   <>
                     <div className="panel-heading"><div><p className="kicker">Card details</p><h3>{selectedCard.title}</h3></div><span className="count">{checklists.length} lists</span></div>
+
+                    <section className="card-parity-grid">
+                      <section className="parity-card compact-card">
+                        <div className="section-heading"><strong>Labels</strong><span className="count">{cardLabelIds.length}</span></div>
+                        <div className="label-assignment-list">
+                          {labels.length === 0 ? <p className="empty">Create board labels above first.</p> : null}
+                          {labels.map((label) => (
+                            <label className="label-assignment" key={label.id}>
+                              <input type="checkbox" checked={cardLabelIds.includes(label.id)} onChange={(event) => void toggleCardLabel(label.id, event.target.checked)} />
+                              <span>{label.name}</span><small>{label.color || 'no color'}</small>
+                            </label>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="parity-card compact-card">
+                        <div className="section-heading"><strong>Comments</strong><span className="count">{comments.length}</span></div>
+                        <form className="comment-form" onSubmit={(event) => void submitComment(event)}>
+                          <textarea aria-label="New comment" maxLength={65536} rows={3} placeholder="Write a local durable comment" value={commentDraft} onChange={(event) => setCommentDraft(event.target.value)} />
+                          <button type="submit">Add comment</button>
+                        </form>
+                        <div className="comment-list">
+                          {comments.map((comment) => (
+                            <article className="comment-entry" key={comment.id}>
+                              <div><strong>{comment.authorUserId || 'local/imported actor'}</strong><time>{comment.createdAt}</time></div>
+                              <p>{comment.body}</p>
+                              <button className="link danger" type="button" onClick={() => void removeComment(comment.id)}>Delete</button>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+                    </section>
+
                     <form className="create-row" onSubmit={(event) => void submitChecklist(event)}>
                       <input aria-label="Checklist title" maxLength={120} placeholder="New checklist" value={checklistTitle} onChange={(event) => setChecklistTitle(event.target.value)} />
                       <button type="submit">Add checklist</button>
@@ -383,14 +605,14 @@ export default function App() {
                       ))}
                     </div>
                   </>
-                ) : <p className="empty">Select a card to manage durable checklists.</p>}
+                ) : <p className="empty">Select a card to manage labels, comments, and durable checklists.</p>}
               </section>
             </>
           )}
         </section>
       </section>
 
-      <footer><span>A08 local planner persistence · pending is local-only until A10</span><span>Secrets: session-only boundary · production providers A09</span></footer>
+      <footer><span>A12 parity surface · explicit roaming/1 unsupported ledger for labels/comments</span><span>Appearance reuses A10 sync · secrets remain behind A09 SecretVault</span></footer>
     </main>
   );
 }

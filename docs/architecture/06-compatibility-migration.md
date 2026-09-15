@@ -33,13 +33,13 @@ Do not preserve as cross-client contracts:
 | Owned workspaces | yes | provisioned/roaming subset | preserve/import | logical node-link/export |
 | Shared workspaces | yes | capability dependent | runtime support; migration gap | existing node-link v1 omits; reinvite/new contract |
 | Boards/columns/cards | yes | local snapshot + ops | full SQLite local authority | same logical entities/events |
-| Labels | yes | partial/node-dependent | parity target | application contract, no SQL coupling |
-| Comments | yes | partial/node-dependent | parity target | application contract |
+| Labels | yes | partial/node-dependent | A12 first-class local parity | durable application contract; roaming/1 mutation gap is explicit |
+| Comments | yes | partial/node-dependent | A12 first-class local parity | durable application contract; roaming/1 mutation gap is explicit |
 | Checklists/items | yes | roaming delta support | preserve delta/tombstones | deterministic rules unchanged |
-| Appearance | yes | roaming support | preserve | logical snapshot/event |
+| Appearance | yes | roaming support | A12 durable + roaming mapping | existing board snapshot / `board.appearance.put` family |
 | Local hides/reminders/preferences | local semantics | device-local | device-local | never promote automatically to global state |
 | Tombstones | yes | yes | preserve | versioned identity + merge semantics |
-| Activity/audit | yes | partial/echo guard | local + synchronized defined subset | explicit provenance; no fabricated history |
+| Activity/audit | yes | partial/echo guard | A12 local/imported provenance | explicit provenance; no fabricated history |
 | Browser cookie/session | yes | no | no | never migrate |
 | Native access token | endpoint exists | memory-only | remote-session memory only; none for local IPC | legacy/coordinator HTTP compatibility |
 | Native refresh token | endpoint exists | SecureStore | vault only for remote sessions | rotate; never import browser token or gate local IPC |

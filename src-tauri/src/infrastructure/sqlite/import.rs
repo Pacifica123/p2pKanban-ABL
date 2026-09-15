@@ -1,6 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension, Transaction, TransactionBehavior};
+use serde_json::{Map, Value};
 
 use crate::{
     application::import::{ImportApplyReport, ImportRepository, ImportRepositoryError},
@@ -99,6 +100,89 @@ fn insert_tombstone(tx: &Transaction<'_>, value: &ImportedTombstone) -> Result<(
     }
     .map(|_| ())
     .map_err(storage)
+}
+
+
+fn object_string<'a>(object: &'a Map<String, Value>, keys: &[&str]) -> Option<&'a str> {
+    keys.iter().find_map(|key| object.get(*key).and_then(Value::as_str))
+}
+
+fn section_array<'a>(plan: &'a ImportPlan, name: &str) -> Result<Vec<&'a Map<String, Value>>, ImportRepositoryError> {
+    let Some(section) = plan.opaque_sections.iter().find(|value| value.section_name == name) else {
+        return Ok(Vec::new());
+    };
+    let value: Value = serde_json::from_str(&section.payload_json).map_err(storage)?;
+    let values = value.as_array().ok_or(ImportRepositoryError::InvalidScope)?;
+    values.iter().map(|value| value.as_object().ok_or(ImportRepositoryError::InvalidScope)).collect()
+}
+
+fn board_workspace(tx: &Transaction<'_>, board_id: &str) -> Result<String, ImportRepositoryError> {
+    tx.query_row("SELECT workspace_id FROM boards WHERE id=?1", [board_id], |row| row.get(0))
+        .optional().map_err(storage)?.ok_or(ImportRepositoryError::InvalidScope)
+}
+
+fn card_scope(tx: &Transaction<'_>, card_id: &str) -> Result<(String, String), ImportRepositoryError> {
+    tx.query_row("SELECT workspace_id,board_id FROM cards WHERE id=?1", [card_id], |row| Ok((row.get(0)?,row.get(1)?)))
+        .optional().map_err(storage)?.ok_or(ImportRepositoryError::InvalidScope)
+}
+
+fn materialize_parity_sections(tx: &Transaction<'_>, plan: &ImportPlan) -> Result<(), ImportRepositoryError> {
+    for (index, object) in section_array(plan, "labels")?.into_iter().enumerate() {
+        let id = object_string(object, &["id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let board_id = object_string(object, &["boardId", "board_id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        board_workspace(tx, board_id)?;
+        let name = object_string(object, &["name", "title", "label"]).unwrap_or("");
+        let color = object_string(object, &["color", "colorToken"]);
+        let position = object.get("position").and_then(Value::as_f64).unwrap_or((index as f64 + 1.0) * 1000.0);
+        let raw = serde_json::to_string(&Value::Object(object.clone())).map_err(storage)?;
+        tx.execute("INSERT INTO labels(id,board_id,name,color,position,raw_json) VALUES (?1,?2,?3,?4,?5,?6)", params![id,board_id,name,color,position,raw]).map_err(storage)?;
+    }
+    for object in section_array(plan, "cardLabels")? {
+        let card_id = object_string(object, &["cardId", "card_id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let label_id = object_string(object, &["labelId", "label_id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let (_, card_board) = card_scope(tx, card_id)?;
+        let label_board: String = tx.query_row("SELECT board_id FROM labels WHERE id=?1", [label_id], |row| row.get(0)).map_err(storage)?;
+        if card_board != label_board { return Err(ImportRepositoryError::InvalidScope); }
+        tx.execute("INSERT INTO card_labels(card_id,label_id) VALUES (?1,?2)", params![card_id,label_id]).map_err(storage)?;
+    }
+    for object in section_array(plan, "comments")? {
+        let id = object_string(object, &["id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let card_id = object_string(object, &["cardId", "card_id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let (workspace_id, board_id) = card_scope(tx, card_id)?;
+        let body = object_string(object, &["body", "content", "text"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let author = object_string(object, &["authorUserId", "userId", "authorId"]);
+        let created = object_string(object, &["createdAt", "occurredAt"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let updated = object_string(object, &["updatedAt"]).unwrap_or(created);
+        let raw = serde_json::to_string(&Value::Object(object.clone())).map_err(storage)?;
+        tx.execute("INSERT INTO comments(id,workspace_id,board_id,card_id,author_user_id,body,created_at,updated_at,raw_json) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)", params![id,workspace_id,board_id,card_id,author,body,created,updated,raw]).map_err(storage)?;
+    }
+    for object in section_array(plan, "boardAppearanceSettings")? {
+        let board_id = object_string(object, &["boardId", "board_id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        board_workspace(tx, board_id)?;
+        let mut normalized = object.clone();
+        normalized.insert("boardId".into(), Value::String(board_id.to_owned()));
+        let raw = serde_json::to_string(&Value::Object(normalized)).map_err(storage)?;
+        let updated = object_string(object, &["updatedAt", "createdAt"]).unwrap_or("");
+        tx.execute("INSERT INTO board_appearance_settings(board_id,settings_json,updated_at) VALUES (?1,?2,?3)", params![board_id,raw,updated]).map_err(storage)?;
+    }
+    for object in section_array(plan, "activityEntries")? {
+        let id = object_string(object, &["id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let board_id = object_string(object, &["boardId", "board_id"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let workspace_id = board_workspace(tx, board_id)?;
+        let card_id = object_string(object, &["cardId", "card_id"]);
+        if let Some(card_id) = card_id {
+            let (card_workspace, card_board) = card_scope(tx, card_id)?;
+            if card_workspace != workspace_id || card_board != board_id { return Err(ImportRepositoryError::InvalidScope); }
+        }
+        let actor = object_string(object, &["actorUserId", "userId", "actorId"]);
+        let kind = object_string(object, &["kind", "action", "type"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let entity_type = object_string(object, &["entityType", "entity_type"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let entity_id = object_string(object, &["entityId", "entity_id"]);
+        let occurred = object_string(object, &["occurredAt", "createdAt"]).ok_or(ImportRepositoryError::InvalidScope)?;
+        let raw = serde_json::to_string(&Value::Object(object.clone())).map_err(storage)?;
+        tx.execute("INSERT INTO activity_entries(id,workspace_id,board_id,card_id,actor_user_id,kind,entity_type,entity_id,payload_json,occurred_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)", params![id,workspace_id,board_id,card_id,actor,kind,entity_type,entity_id,raw,occurred]).map_err(storage)?;
+    }
+    Ok(())
 }
 
 fn advance_lamport_floor(tx: &Transaction<'_>, plan: &ImportPlan) -> Result<(), ImportRepositoryError> {
@@ -228,6 +312,8 @@ impl ImportRepository for SqliteImportRepository {
             )
             .map_err(storage)?;
         }
+        materialize_parity_sections(&tx, plan)?;
+
         for section in &plan.opaque_sections {
             tx.execute(
                 "INSERT INTO import_opaque_sections(source_digest, section_name, payload_json) VALUES (?1, ?2, ?3)",
@@ -300,6 +386,45 @@ mod tests {
             assert_eq!(repository.connection.query_row("SELECT COUNT(*) FROM cards", [], |row| row.get::<_, i64>(0)).unwrap(), 1);
             assert_eq!(repository.connection.query_row("SELECT source_digest FROM import_receipts", [], |row| row.get::<_, String>(0)).unwrap(), digest);
         }
+        cleanup(&layout);
+    }
+
+    #[test]
+    fn a12_portable_parity_sections_materialize_without_local_mutation_markers() {
+        let layout = temp_profile("portable-parity");
+        cleanup(&layout);
+        let raw = include_str!("../../../../fixtures/export/portable-board-bundle-v1-parity.json");
+        let plan = parse_portable_bundle_v1(raw).unwrap();
+        let mut repository = SqliteImportRepository::open(&layout).unwrap();
+        repository.apply_plan(&plan).unwrap();
+        for (table, expected) in [
+            ("labels", 1_i64),
+            ("card_labels", 1),
+            ("comments", 1),
+            ("board_appearance_settings", 1),
+            ("activity_entries", 1),
+        ] {
+            let count: i64 = repository.connection.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0)).unwrap();
+            assert_eq!(count, expected, "unexpected {table} count");
+        }
+        assert_eq!(repository.connection.query_row("SELECT COUNT(*) FROM pending_local_changes", [], |row| row.get::<_, i64>(0)).unwrap(), 0);
+        assert_eq!(repository.connection.query_row("SELECT COUNT(*) FROM parity_local_changes", [], |row| row.get::<_, i64>(0)).unwrap(), 0);
+        let settings: String = repository.connection.query_row("SELECT settings_json FROM board_appearance_settings", [], |row| row.get(0)).unwrap();
+        assert!(settings.contains("violet"));
+        cleanup(&layout);
+    }
+
+    #[test]
+    fn a12_import_rejects_fabricated_activity_provenance() {
+        let layout = temp_profile("parity-provenance");
+        cleanup(&layout);
+        let mut raw: serde_json::Value = serde_json::from_str(include_str!("../../../../fixtures/export/portable-board-bundle-v1-parity.json")).unwrap();
+        raw["payload"]["activityEntries"][0].as_object_mut().unwrap().remove("occurredAt");
+        let encoded = serde_json::to_string(&raw).unwrap();
+        let plan = parse_portable_bundle_v1(&encoded).unwrap();
+        let mut repository = SqliteImportRepository::open(&layout).unwrap();
+        assert_eq!(repository.apply_plan(&plan), Err(ImportRepositoryError::InvalidScope));
+        assert_eq!(repository.connection.query_row("SELECT COUNT(*) FROM import_receipts", [], |row| row.get::<_, i64>(0)).unwrap(), 0);
         cleanup(&layout);
     }
 

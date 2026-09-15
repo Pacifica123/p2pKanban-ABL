@@ -150,3 +150,32 @@ A11 performs complete validation/preflight, refuses existing vault-key collision
 After the cache-order correction allowed Cargo to reach actual compilation, `cargo build --locked --offline` failed on `serde_json::Map::entry("...".into())` at A10/A11 compatibility helpers. With the resolved dependency graph, the extra `.into()` leaves the generic target type ambiguous because multiple crates provide `From<&str>` candidates. A11 removes the unnecessary conversion and passes the `&str` key directly, which is the API's intended `Into<String>` input.
 
 `cargo test --locked --offline` additionally exposed an older A09 unit-test initializer that constructed `VaultStatus` with only `mode`/`durable`, while the current A09 contract also requires `state` and `passphrase_fallback_available`. The test now constructs `VaultStatus::session_only(VaultState::ProviderUnavailable)` and asserts all four wire fields. Two imports made obsolete by A11 wiring are removed to keep the host build clean. Deterministic A11 checks now reject reintroduction of the ambiguous `Map::entry` form and require the complete VaultStatus wire regression assertion.
+
+## DEBT-A12-001 — roaming/1 has no proven label/comment mutation operations
+
+**Classification:** [FACT] from the frozen A00/A10 roaming operation allowlist.
+**Architecture impact:** cross-device parity convergence for labels/comments.
+**Status:** explicit, bounded debt; A12 does not invent a protocol extension.
+
+A12 stores labels/comments as first-class durable native state but records each
+local label/comment/card-label mutation in `parity_local_changes` with reason
+`roaming-v1-unsupported`. These rows are intentionally separate from A08/A10
+`pending_local_changes`: feeding an unsupported marker into A10 would either
+poison materialization or tempt a silent lossy mapping. A future protocol stage
+must define authenticated/versioned operations and an upgrade path before these
+markers can become a real outbox.
+
+## DEBT-A12-002 — appearance operation is proven; exact unseen legacy event body is not
+
+**Classification:** [FACT + bounded inference] from A00/A10 source anchors and
+`roaming-board-snapshot-v1` fixture.
+**Architecture impact:** appearance wire representation.
+**Status:** normalized A12 mapping with explicit non-claim.
+
+The frozen compatibility evidence proves `board.appearance.put` and the snapshot
+`appearance` object. The original web/Android source archives are not present in
+the A12 construction environment, so the Arch adapter uses normalized
+`payload.appearance` and proves its own materialize/apply behavior rather than
+claiming byte-identical reproduction of an unseen legacy event body. This must be
+rechecked against source before any future protocol-version or multi-client
+appearance expansion.

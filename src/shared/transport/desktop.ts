@@ -1,12 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
 import { ApiError } from '../api/errors';
 import type {
+  ActivitySummary,
+  AppearanceSummary,
   BackendVersion,
   BoardSummary,
   CardSummary,
   ChecklistItemSummary,
   ChecklistSummary,
   ColumnSummary,
+  CommentSummary,
+  LabelSummary,
+  ParityUnsyncedCount,
   PendingChangeCount,
   ProfileDiagnostics,
   VaultStatus,
@@ -40,6 +45,19 @@ const DESKTOP_CREATE_CHECKLIST_ITEM_COMMAND = 'desktop_api_create_checklist_item
 const DESKTOP_SET_CHECKLIST_ITEM_DONE_COMMAND = 'desktop_api_set_checklist_item_done' as const;
 const DESKTOP_DELETE_CHECKLIST_ITEM_COMMAND = 'desktop_api_delete_checklist_item' as const;
 const DESKTOP_PENDING_CHANGE_COUNT_COMMAND = 'desktop_api_pending_change_count' as const;
+
+const DESKTOP_LIST_LABELS_COMMAND = 'desktop_api_list_labels' as const;
+const DESKTOP_CREATE_LABEL_COMMAND = 'desktop_api_create_label' as const;
+const DESKTOP_DELETE_LABEL_COMMAND = 'desktop_api_delete_label' as const;
+const DESKTOP_LIST_CARD_LABEL_IDS_COMMAND = 'desktop_api_list_card_label_ids' as const;
+const DESKTOP_SET_CARD_LABEL_COMMAND = 'desktop_api_set_card_label' as const;
+const DESKTOP_LIST_COMMENTS_COMMAND = 'desktop_api_list_comments' as const;
+const DESKTOP_CREATE_COMMENT_COMMAND = 'desktop_api_create_comment' as const;
+const DESKTOP_DELETE_COMMENT_COMMAND = 'desktop_api_delete_comment' as const;
+const DESKTOP_GET_APPEARANCE_COMMAND = 'desktop_api_get_appearance' as const;
+const DESKTOP_SET_APPEARANCE_COMMAND = 'desktop_api_set_appearance' as const;
+const DESKTOP_LIST_ACTIVITY_COMMAND = 'desktop_api_list_activity' as const;
+const DESKTOP_UNSYNCED_PARITY_COUNT_COMMAND = 'desktop_api_unsynced_parity_count' as const;
 
 function unsupported(path: string, method: string): never {
   throw new ApiError(`Desktop route is not implemented yet: ${method} ${path}`, {
@@ -175,6 +193,55 @@ export const desktopTransport: ApiTransport = {
     if (method === 'POST' && path === '/planner/pending-count') {
       const body = jsonBody<{ workspaceId: string; boardId: string }>(init);
       return (await invoke<PendingChangeCount>(DESKTOP_PENDING_CHANGE_COUNT_COMMAND, body)) as T;
+    }
+
+    if (method === 'POST' && path === '/parity/labels/list') {
+      const body = jsonBody<{ workspaceId: string; boardId: string }>(init);
+      return (await invoke<LabelSummary[]>(DESKTOP_LIST_LABELS_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/labels') {
+      const body = jsonBody<{ workspaceId: string; boardId: string; name: string; color: string | null }>(init);
+      return (await invoke<LabelSummary>(DESKTOP_CREATE_LABEL_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/labels/delete') {
+      const body = jsonBody<{ workspaceId: string; boardId: string; labelId: string }>(init);
+      return (await invoke<void>(DESKTOP_DELETE_LABEL_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/card-labels/list') {
+      const body = jsonBody<{ workspaceId: string; cardId: string }>(init);
+      return (await invoke<string[]>(DESKTOP_LIST_CARD_LABEL_IDS_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/card-labels/set') {
+      const body = jsonBody<{ workspaceId: string; cardId: string; labelId: string; assigned: boolean }>(init);
+      return (await invoke<void>(DESKTOP_SET_CARD_LABEL_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/comments/list') {
+      const body = jsonBody<{ workspaceId: string; cardId: string }>(init);
+      return (await invoke<CommentSummary[]>(DESKTOP_LIST_COMMENTS_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/comments') {
+      const body = jsonBody<{ workspaceId: string; cardId: string; body: string }>(init);
+      return (await invoke<CommentSummary>(DESKTOP_CREATE_COMMENT_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/comments/delete') {
+      const body = jsonBody<{ workspaceId: string; commentId: string }>(init);
+      return (await invoke<void>(DESKTOP_DELETE_COMMENT_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/appearance/get') {
+      const body = jsonBody<{ workspaceId: string; boardId: string }>(init);
+      return (await invoke<AppearanceSummary>(DESKTOP_GET_APPEARANCE_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/appearance/set') {
+      const body = jsonBody<{ workspaceId: string; boardId: string; settingsJson: string }>(init);
+      return (await invoke<AppearanceSummary>(DESKTOP_SET_APPEARANCE_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/activity/list') {
+      const body = jsonBody<{ workspaceId: string; boardId: string; limit: number }>(init);
+      return (await invoke<ActivitySummary[]>(DESKTOP_LIST_ACTIVITY_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/parity/unsynced-count') {
+      const body = jsonBody<{ workspaceId: string; boardId: string }>(init);
+      return (await invoke<ParityUnsyncedCount>(DESKTOP_UNSYNCED_PARITY_COUNT_COMMAND, body)) as T;
     }
     return unsupported(path, method);
   },

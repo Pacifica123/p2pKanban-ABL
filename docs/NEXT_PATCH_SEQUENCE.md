@@ -20,7 +20,7 @@ A11 implemented/acceptance target:
 - provide deterministic malformed/replay/downgrade/rollback tests against A00 device-link and portable-bundle fixtures;
 - keep browser/Docker node-link assumptions outside the native runtime.
 
-After A11 canonical UTS is green, the next architecture patch is **A12 — labels/comments/activity/appearance parity**, then **A13 lifecycle/integration capability detection**.
+A11 canonical UTS is green. The current architecture patch is **A12 — labels/comments/activity/appearance parity**. After A12 canonical UTS is green, proceed to **A13 — lifecycle/integration capability detection**.
 
 
 ## A11 implemented boundary
@@ -28,3 +28,8 @@ After A11 canonical UTS is green, the next architecture patch is **A12 — label
 A11 adds schema v5 import receipts/principal/capability metadata, a storage-independent import plan, portable bundle v1 roundtrip/import, device-link/2 grant binding, and web-node-link v1 destination provisioning. New native device/replica identity is not copied from a legacy deployment; board/device secret bytes go only through `SecretVault`. Portable imports do not create `pending_local_changes`. Shared workspaces and node-local hides omitted by web-node-link v1 are surfaced in the import report.
 
 The WebView still has no generic filesystem/keyring/network privilege. Live Nostr device-link event verification/chunk transport and legacy-node HTTP/session acquisition remain native transport adapters outside this A11 destination boundary and are not claimed as implemented.
+
+
+## A12 implemented boundary
+
+A12 promotes labels/card-label edges, comments, activity provenance and board appearance to first-class native schema/application/IPC/UI contracts. Label/comment mutations are durable but recorded separately as `roaming-v1-unsupported`; appearance alone reuses the proven A10 `board.appearance.put` path. A11 portable parity sections are materialized during fresh-profile import without generating local mutation markers. No new WebView filesystem/keyring/network privilege is introduced.
