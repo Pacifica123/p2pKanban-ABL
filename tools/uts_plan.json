@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A09",
-  "description": "Canonical UserTestSpace verification through A09. A09 adds fail-closed Linux Secret Service root protection, AEAD-encrypted typed secret records, a versioned Argon2id passphrase provider and session-only degradation; provider absence/locked state is supported, not a runtime failure.",
+  "stage": "A09b",
+  "description": "Canonical UserTestSpace verification through A09b. A09b corrects the A09 AEAD dependency graph after real UTS rejected a yanked transitive chacha20 release; final Cargo acceptance remains offline.",
   "deterministic": [
     {
       "id": "a00",
@@ -145,6 +145,14 @@
         "python3",
         "-B",
         "tools/check_a09.py"
+      ]
+    },
+    {
+      "id": "a09b",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a09b.py"
       ]
     }
   ],

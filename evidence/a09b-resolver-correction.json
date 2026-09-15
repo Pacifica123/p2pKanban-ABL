@@ -1,0 +1,44 @@
+{
+  "formatVersion": 1,
+  "stage": "A09b",
+  "facts": [
+    "Canonical A09 UTS passed all deterministic and frontend gates but failed cargo.lock.offline-recheck.",
+    "The first offline resolution lacked argon2 0.6.0 in the local index/cache; explicit network preparation resolved a lockfile successfully.",
+    "The mandatory offline re-resolution then failed because chacha20poly1305 0.11.0 selected yanked chacha20 0.10.1.",
+    "A09b pins chacha20poly1305 0.10.1, whose dependency line uses chacha20 0.9.x and preserves XChaCha20Poly1305 semantics used by the vault."
+  ],
+  "inferences": [
+    "The verifier correctly rejected the A09 dependency graph because final acceptance must remain offline-capable after explicit cache/index preparation.",
+    "Downgrading only the affected AEAD package minimizes cryptographic implementation churn while removing the yanked transitive dependency."
+  ],
+  "proposals": [
+    "After A09b UTS is green, resume A10 without weakening Cargo offline acceptance."
+  ],
+  "unresolved": [
+    "Cargo.lock is still materialized in UTS rather than committed because exact resolver output from the user workspace has not been supplied as a source artifact."
+  ],
+  "externalAnchors": [
+    {
+      "label": "chacha20poly1305 0.10.1 documentation",
+      "url": "https://docs.rs/chacha20poly1305/0.10.1/chacha20poly1305/"
+    },
+    {
+      "label": "chacha20poly1305 0.11.0 changelog / chacha20 0.10 dependency",
+      "url": "https://docs.rs/crate/chacha20poly1305/0.11.0/source/CHANGELOG.md"
+    }
+  ],
+  "sources": [
+    {
+      "path": "src-tauri/Cargo.toml",
+      "sha256": "82dd3ff4611e81690b7a051c4534bbcba480af496be673b9a8a879e6a6be70b1"
+    },
+    {
+      "path": "tools/check_a09.py",
+      "sha256": "2303b8a98f6029996def2fe1848a1ca30c591126bebffaff8a7463d5f36c157c"
+    },
+    {
+      "path": "tools/uts_verify.py",
+      "sha256": "f2ef5ca82b5914b0a69648ea5c32df924962c264d4892c3aeb6743a8f2619766"
+    }
+  ]
+}

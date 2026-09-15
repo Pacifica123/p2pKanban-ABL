@@ -23,3 +23,9 @@ A10 exit target:
 - do not begin A11 device-link/import migration until local/fixture sync-core behavior is deterministic.
 
 Then, in order: **A10 sync-core/roaming compatibility → A11 device-link/import migration → A12 parity surface**.
+
+## A09b resolver correction
+
+Canonical A09 UTS did not reach Cargo test/build because the final offline lock re-resolution rejected the yanked `chacha20 0.10.1` selected by `chacha20poly1305 0.11.0`. A09b pins `chacha20poly1305 0.10.1` instead and deliberately keeps the verifier fail-closed/offline.
+
+Run `python3 -B tools/uts_verify.py --allow-network` once after A09b. A10 remains the exact next architecture patch only after this UTS rerun is green.

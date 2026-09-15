@@ -21,6 +21,7 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | A08 cards/order/archive/delete/checklists durable planner slice | schema v3, `application/planner.rs`, SQLite planner adapter + tombstones/pending markers, typed Tauri/React planner UI, `tools/check_a08.py`, `docs/evidence/A08_DURABLE_PLANNER_SLICE.md` | **implemented and user-reported canonical UTS verified** | A09 |
 | ADR-004 Secret Service/passphrase/session-only secret policy | `application/vault.rs`, `infrastructure/linux/secrets.rs`, ADR-004, status-only vault IPC | **implemented through A09 storage/provider boundary; multi-host provider matrix remains experiment-needed** | A10 |
 | A09 production Linux secret persistence matrix | `infrastructure/linux/secrets.rs`, encrypted profile vault/root wrapper, Secret Service bootstrap, Argon2id/XChaCha20-Poly1305 tests, `tools/check_a09.py`, `tools/a09_host_secret_service_probe.py`, `docs/evidence/A09_SECRET_PERSISTENCE.md` | **implemented at source/deterministic-check level; canonical UTS crypto/provider-state evidence pending** | A10 |
+| A09b canonical UTS Cargo resolver correction | `src-tauri/Cargo.toml`, `tools/check_a09b.py`, `docs/evidence/A09B_UTS_RESOLVER_CORRECTION.md`, `evidence/a09b-resolver-correction.json` | **implemented at source/deterministic-check level; canonical UTS rerun pending** | A10 |
 | A10 sync-core + Nostr roaming compatibility | golden logical fixtures only; no desktop transport | **planned** | A10 |
 | A11 device-link/2 + web-node-link/bundle migration | compatibility fixture/evidence only | **planned** | A11 |
 | A12 labels/comments/activity/appearance parity | none yet | **planned** | A12 |
@@ -45,3 +46,7 @@ This still does **not** claim manual rendered WebView health text or hostile-nav
 ## A09 explicit non-claims
 
 A09 protects typed credentials/capabilities/keys, not planner content. It does **not** claim SQLCipher/full-database encryption, automatic keyring daemon/PAM setup, provider migration UX, multi-host GNOME/KWallet proof, remote login/device-link provisioning, or sync/P2P behavior. When no usable durable provider is available, planner data remains readable but durable secret operations stay fail-closed/session-only.
+
+## A09b UTS correction
+
+Canonical A09 UTS proved the application/frontend gates but rejected the dependency graph during final offline lock resolution because `chacha20poly1305 0.11.0` selected yanked `chacha20 0.10.1`. A09b changes only that AEAD pin to the stable 0.10.1 line; offline acceptance remains mandatory.

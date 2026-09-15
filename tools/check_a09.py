@@ -25,7 +25,7 @@ for rel in required: read(rel)
 cargo = read("src-tauri/Cargo.toml")
 for token in (
     'secret-service = { version = "=5.2.0", default-features = false, features = ["rt-tokio-crypto-rust"] }', 'argon2 = "=0.6.0"',
-    'chacha20poly1305 = { version = "=0.11.0", features = ["zeroize"] }',
+    'chacha20poly1305 = "=0.10.1"',
     'getrandom = "=0.4.3"',
 ):
     if token not in cargo: fail("missing exact-pinned A09 dependency: " + token)
@@ -84,7 +84,8 @@ verifier = read("tools/uts_verify.py")
 for token in ("P2PKANBAN_UTS_SECRET_CANARY", "security.secret-canary-logs"):
     if token not in verifier: fail("UTS secret-canary contract missing " + token)
 plan = json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A09": fail("UTS plan did not advance to A09")
+if plan.get("schemaVersion") != 1: fail("UTS plan schema mismatch")
+# A09 remains a regression gate after later stages; it must not freeze the canonical plan at A09.
 ids = [x.get("id") for x in plan.get("deterministic", [])]
 for required_id in ("a08", "a09"):
     if required_id not in ids: fail("missing deterministic gate " + required_id)
@@ -98,7 +99,7 @@ status = read("docs/IMPLEMENTATION_STATUS.md")
 line = next((x for x in status.splitlines() if "A09 production Linux secret persistence matrix" in x), "")
 if "implemented" not in line.lower() or "A10" not in line: fail("implementation ledger did not advance A09 toward A10")
 sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "exact next architecture patch is **A10" not in sequence: fail("next-patch sequence did not advance to A10")
+if "A10" not in sequence: fail("next-patch sequence lost A10")
 adr = read("docs/architecture/adr/ADR-004-secrets.md")
 if "implemented through A09" not in adr or "full planner database encryption is still not claimed" not in adr.lower():
     fail("ADR-004 not synchronized with A09 boundary/non-claim")
