@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "stage": "A11",
-  "description": "Canonical UserTestSpace verification through A11. A11 corrects the direct serde pin to 1.0.228 for fresh-host offline re-resolution, adds schema v5 import/link metadata, portable bundle v1 roundtrip/import, and Rust-only device-link/2 + web-node-link v1 destination provisioning behind SecretVault; no WebView secret/filesystem privilege or live relay/legacy-node transport is claimed.",
+  "description": "Canonical UserTestSpace verification through A11. A11 corrects the direct serde pin to 1.0.228, and its explicit Cargo network-preparation path now generates the lock, fetches that exact locked graph, then deletes/regenerates Cargo.lock offline and requires byte-equivalence before offline fetch/test/build. A11 also adds schema v5 import/link metadata, portable bundle v1 roundtrip/import, and Rust-only device-link/2 + web-node-link v1 destination provisioning behind SecretVault; no WebView secret/filesystem privilege or live relay/legacy-node transport is claimed.",
   "deterministic": [
     {
       "id": "a00",
@@ -366,6 +366,6 @@
     "A11: portable bundle import is a native application operation; no generic WebView filesystem/keyring command is introduced.",
     "A11: device-link/2 and web-node-link v1 methods consume already authenticated/decrypted native transport results; live Nostr signature/chunk transport and legacy-node HTTP/session orchestration are not claimed by this stage.",
     "A11: web-node-link v1 destination provisioning requires an empty native profile and reports omitted shared workspaces/node-local hides alongside excluded deployment/session state.",
-    "A11: final Cargo acceptance must still pass cargo generate-lockfile --offline after any explicit network preparation; serde 1.0.228 is the direct compatibility pin."
+    "A11: if Cargo needs explicit network preparation, the verifier must fetch the exact network-generated locked graph first, then delete/regenerate Cargo.lock offline, require byte-identical lock output, and continue with locked offline fetch/test/build; serde 1.0.228 remains the direct compatibility pin."
   ]
 }

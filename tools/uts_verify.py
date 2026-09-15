@@ -135,6 +135,89 @@ def offline_then_optional_network(
     return ok
 
 
+
+def prepare_cargo_lock(
+    cargo: dict[str, Any],
+    lock_path: Path,
+    report_dir: Path,
+    results: list[Result],
+    allow_network: bool,
+) -> bool:
+    """Create Cargo.lock with a mandatory offline acceptance pass.
+
+    On a fresh/partial cache, online `generate-lockfile` updates the index but does
+    not download the selected crate archives. Rechecking resolution offline before
+    `cargo fetch` therefore makes the result depend on whatever crate versions
+    happened to be cached on the host. Explicit network preparation must populate
+    the exact lock graph first, then remove the online lock and regenerate it
+    offline. Byte equality proves that offline resolution selected the same graph.
+    """
+    first = run_command("cargo.lock.offline", cargo["lockOffline"], report_dir)
+    if first.status == "PASS":
+        results.append(first)
+        if not lock_path.is_file():
+            results.append(synthetic("cargo.lock", "FAIL", "offline lock command returned success but Cargo.lock is missing"))
+            return False
+        results.append(synthetic("cargo.lock", "PASS", "lockfile generated without network"))
+        return True
+
+    if not allow_network:
+        results.append(first)
+        results.append(synthetic(
+            "cargo.lock",
+            "BLOCKED",
+            "offline lock resolution failed; rerun with --allow-network to populate the exact Cargo cache explicitly",
+        ))
+        return False
+
+    first.status = "RETRY"
+    first.note = "offline cache incomplete; explicit network lock+fetch preparation requested"
+    results.append(first)
+
+    prep = run_command("cargo.lock.network-prepare", cargo["lockNetwork"], report_dir)
+    results.append(prep)
+    if prep.status != "PASS" or not lock_path.is_file():
+        results.append(synthetic("cargo.lock", "FAIL", "network lock generation failed or did not create Cargo.lock"))
+        return False
+
+    online_lock = lock_path.read_bytes()
+
+    cache = run_command("cargo.lock.network-fetch", cargo["fetchNetwork"], report_dir)
+    results.append(cache)
+    if cache.status != "PASS":
+        results.append(synthetic("cargo.lock", "FAIL", "network cache population for the generated lock failed"))
+        return False
+
+    # Prove resolver independence from the online-created lockfile itself. The
+    # selected archives/index metadata are now cached; the next lock is generated
+    # from scratch with Cargo offline.
+    try:
+        lock_path.unlink()
+    except FileNotFoundError:
+        results.append(synthetic("cargo.lock", "FAIL", "Cargo.lock disappeared before offline re-resolution"))
+        return False
+
+    second = run_command("cargo.lock.offline-recheck", cargo["lockOffline"], report_dir)
+    results.append(second)
+    if second.status != "PASS" or not lock_path.is_file():
+        results.append(synthetic("cargo.lock", "FAIL", "network preparation used; final lock re-resolution failed offline"))
+        return False
+
+    same = lock_path.read_bytes() == online_lock
+    results.append(synthetic(
+        "cargo.lock.offline-equivalence",
+        "PASS" if same else "FAIL",
+        "offline-regenerated Cargo.lock is byte-identical to the network-prepared lock"
+        if same else
+        "offline-regenerated Cargo.lock differs from the network-prepared lock",
+    ))
+    results.append(synthetic(
+        "cargo.lock",
+        "PASS" if same else "FAIL",
+        "network preparation used only to populate cache; final lock was regenerated and accepted offline",
+    ))
+    return same
+
 def verify_artifact(step_id: str, rel: str, results: list[Result]) -> bool:
     path = ROOT / rel
     ok = path.is_file()
@@ -236,11 +319,9 @@ def main() -> int:
     if lock_path.is_file():
         results.append(synthetic("cargo.lock", "PASS", f"existing lockfile: {cargo['lock']}"))
     else:
-        cargo_ready = offline_then_optional_network(
-            "cargo.lock", cargo["lockOffline"], cargo["lockNetwork"], report_dir, results, args.allow_network,
-        )
+        cargo_ready = prepare_cargo_lock(cargo, lock_path, report_dir, results, args.allow_network)
         if cargo_ready and not lock_path.is_file():
-            results.append(synthetic("cargo.lock.artifact", "FAIL", "cargo command returned success but Cargo.lock is missing"))
+            results.append(synthetic("cargo.lock.artifact", "FAIL", "Cargo lock preparation returned success but Cargo.lock is missing"))
             cargo_ready = False
 
     if cargo_ready:

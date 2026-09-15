@@ -42,8 +42,9 @@
     }
   ],
   "facts": [
-    "A10 UTS deterministic/frontend checks passed and the mandatory Cargo offline lock recheck failed because the direct serde 1.0.229 pin conflicted with the fresh-host offline serde 1.0.228 resolution line.",
-    "A11 changes only the direct serde compatibility pin to 1.0.228 and retains mandatory offline Cargo lock/fetch/test/build acceptance.",
+    "A10 UTS deterministic/frontend checks passed and cargo.lock.offline-recheck exposed the host offline serde 1.0.228 cache line against the former direct serde 1.0.229 pin; A11 retains the agreed serde 1.0.228 direct compatibility pin.",
+    "The first A11 UTS (20260915T054436Z) passed deterministic/frontend gates, then online cargo generate-lockfile selected exact serde_json 1.0.151 while the immediate offline recheck exposed only the host-cached serde_json 1.0.149 line for Tauri.",
+    "The A11 verifier previously ran locked cargo fetch only after cargo.lock.offline-recheck; A11 now performs online lock generation plus locked network fetch, deletes that online lock, regenerates Cargo.lock offline, requires byte-equivalence, then continues with locked offline fetch/test/build.",
     "Schema v5 stores import receipts, principal identifiers, capability metadata and opaque portable JSON, but no device private key or board key bytes.",
     "Portable bundle v1 is validated as board-scoped application state, requires an empty/fresh A11 migration destination, preserves stable logical UUIDs plus restoreHints/unknown metadata, and has a deterministic parse-export-parse compatibility test including exact non-null card archivedAt preservation.",
     "Device-link/2 provisioning binds the grant scope/epoch/subject to a fresh native replica and vault-only board/device secret material.",
@@ -53,6 +54,7 @@
   ],
   "formatVersion": 1,
   "inferences": [
+    "A network-only cargo generate-lockfile is index/lock preparation, not sufficient fresh-host crate-cache preparation; pinning direct dependencies to arbitrary historical cache contents would make acceptance host-history dependent.",
     "Treating imported state as replica seed rather than a local mutation avoids echoing restored content through the A10 outbox path.",
     "Vault-before-DB ordering plus collision rejection is the safer cross-resource failure direction because a crash can leave only unreachable secret material rather than an active board without its required key.",
     "Preserving unknown portable sections and entity fields as validated JSON avoids silent data loss before A12 promotes more fields to first-class native entities.",
@@ -93,15 +95,19 @@
     },
     {
       "path": "tools/check_a11.py",
-      "sha256": "b362aaee5bb7849b651bf79166d479d5845b4e3b5c978d5fdd90c8e3cbff1fbe"
+      "sha256": "e4966c4b6519b1cb38f331081d9b1f047b36e1f467cba0502ec7ab6a87448740"
     },
     {
       "path": "tools/uts_plan.json",
-      "sha256": "b447474de7965bf206e44b4783131b0fcd77906ccc63a80a3cbd4fe73408a573"
+      "sha256": "191f7abdb7e488e5a738a06b0a273ad406f3e0b41527c3b1af03540663fe1787"
     },
     {
       "path": "docs/evidence/A11_DEVICE_LINK_IMPORT_MIGRATION.md",
-      "sha256": "ac85c43c3347b8fb2cc1f1920de0203122813fcf0d96f699cdf0f2abd8ef73e5"
+      "sha256": "71a0e20f93cab47b6f9975b329869dee8471e3e7df4ec63744b72abd34afba9c"
+    },
+    {
+      "path": "tools/uts_verify.py",
+      "sha256": "2258d00229d822d5f9ac321e537bebbd215fbb840f7b5591a0488f35f0a12f0f"
     }
   ],
   "stage": "A11",
@@ -109,6 +115,6 @@
   "unresolved": [
     "Live Nostr signed-event verification, delegation-chain/chunk transport and relay lifecycle for device-link/2 are not implemented by this destination boundary.",
     "Legacy web-node-link source HTTP/session acquisition is not implemented and must remain a native bounded adapter rather than WebView networking.",
-    "Cargo compile/test and the final fresh-host offline resolver acceptance require the user's Arch-family UTS because this construction environment has no Rust toolchain."
+    "Cargo compile/test and corrected fresh-host lock→network-fetch→offline-regenerate acceptance require a rerun on the user's Arch-family UTS because this construction environment has no Rust toolchain."
   ]
 }

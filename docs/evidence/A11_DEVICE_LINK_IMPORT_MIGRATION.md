@@ -73,13 +73,27 @@ workspaces or node-local hides, in addition to password/session/token/device and
 deployment secret state. Destination provisioning is rejected unless the native
 profile is empty.
 
-## Dependency prerequisite correction
+## Dependency prerequisite corrections
 
-The A10 UTS reached `cargo.lock.offline-recheck` and proved that the direct exact
-`serde = 1.0.229` pin was incompatible with the fresh-host offline sparse-index
-resolution used by `secret-service 5.2.0`, where `serde 1.0.228` was available.
-Per the agreed patch sequence, A11 changes the direct pin to **1.0.228**. There
-is no A10b/A09c stage and the offline lock re-resolution gate remains mandatory.
+The A10 UTS reached `cargo.lock.offline-recheck` and showed that the direct exact
+`serde = 1.0.229` pin conflicted with the host's offline `serde 1.0.228` cache
+line. Per the agreed patch sequence, A11 retains the direct compatibility pin at
+**1.0.228**. There is no A10b/A09c stage.
+
+The first A11 host UTS then exposed the systemic part of the same class of
+failure: all deterministic/frontend checks passed, online lock generation
+selected exact `serde_json 1.0.151`, but the immediate offline recheck could see
+only the host's already-cached `serde_json 1.0.149` line for Tauri. The verifier
+was attempting its locked `cargo fetch` only after that recheck. Online
+`generate-lockfile` alone is not sufficient cache preparation.
+
+A11 therefore does **not** chase the machine cache by lowering `serde_json`. When
+network preparation is explicitly allowed, the canonical verifier now generates
+the online lock, performs locked online `cargo fetch` for that exact graph,
+removes the online-created lock, regenerates it with `--offline`, requires the
+offline lock to be byte-identical, and only then proceeds to locked offline
+fetch/test/build. The mandatory offline resolver gate is strengthened, not
+skipped or relaxed.
 
 ## Security boundary
 
@@ -109,3 +123,5 @@ invariants, source anchors, UTS strictness and SSOT evidence. The canonical
 
 The construction environment has no Cargo toolchain, so Cargo compilation,
 resolver and host Secret Service evidence remain delegated to the user's UTS.
+The first A11 UTS supplied the cache-order failure above; a rerun is required to
+prove the corrected lock→fetch→offline-regenerate sequence on the Arch host.

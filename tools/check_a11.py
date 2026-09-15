@@ -276,9 +276,22 @@ probes = {item.get("id"): " ".join(item.get("command", [])) for item in plan.get
 if "a11-import-compatibility" not in probes or "a11_" not in probes["a11-import-compatibility"]:
     fail("A11 host Cargo compatibility probe missing")
 verify = read("tools/uts_verify.py")
-for token in ["offline_then_optional_network", "run_deterministic_phase", '".offline-recheck"', "--deterministic-only"]:
+for token in [
+    "offline_then_optional_network",
+    "prepare_cargo_lock",
+    "run_deterministic_phase",
+    '"cargo.lock.network-fetch"',
+    "online_lock = lock_path.read_bytes()",
+    "lock_path.unlink()",
+    '"cargo.lock.offline-recheck"',
+    '"cargo.lock.offline-equivalence"',
+    'cargo["fetchNetwork"]',
+    "--deterministic-only",
+]:
     if token not in verify:
         fail("single-entry UTS strictness drifted: " + token)
+if verify.index('"cargo.lock.network-fetch"') > verify.index('"cargo.lock.offline-recheck"'):
+    fail("Cargo cache population must happen before mandatory offline lock re-resolution")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
 if "A11 device-link/2 + web-node-link/bundle migration" not in status or "canonical Cargo/offline UTS pending" not in status:
@@ -287,7 +300,7 @@ next_sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
 if "A12 — labels/comments/activity/appearance parity" not in next_sequence:
     fail("next stage after A11 is not A12 parity")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
-for token in ["CORR-A11-001", "serde 1.0.228", "no A10b/A09c", "DEBT-A11-002", "BEGIN IMMEDIATE"]:
+for token in ["CORR-A11-001", "CORR-A11-002", "serde 1.0.228", "no A10b/A09c", "network-fetch", "DEBT-A11-002", "BEGIN IMMEDIATE"]:
     if token not in debt:
         fail("A11 correction/debt ledger missing " + token)
 

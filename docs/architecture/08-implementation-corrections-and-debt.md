@@ -122,6 +122,16 @@ After network preparation, `cargo generate-lockfile --offline` selected `secret-
 
 After explicit network refresh, the final mandatory `cargo generate-lockfile --offline` could resolve `secret-service ^1` only against the cached `serde 1.0.228` line while the native crate forced exact `serde 1.0.229`. A11 aligns the direct application pin to **serde 1.0.228**. The verifier is intentionally not weakened: offline lock re-resolution remains a release acceptance requirement.
 
+## CORR-A11-002 — Cargo lock offline recheck ran before network cache population
+
+**Classification:** [FACT] from canonical A11 UTS `20260915T054436Z`.
+**Architecture impact:** verifier/cache preparation only; dependency versions and A11 import/link semantics are unchanged.
+**Status:** corrected inside A11; no follow-up compatibility stage.
+
+The first A11 host UTS passed all deterministic/frontend gates but failed `cargo.lock.offline-recheck`: online `cargo generate-lockfile` selected the exact direct `serde_json 1.0.151`, while the immediate offline resolver exposed only the previously cached `serde_json 1.0.149` line to Tauri. The verifier already had a strict locked `cargo fetch` step, but it ran only **after** the offline lock recheck, so explicit network preparation updated the index/lock without populating the selected crate archives first. Chasing the host cache by pinning `serde_json 1.0.149` would make acceptance machine-history dependent.
+
+A11 now makes Cargo preparation ordered and reproducible: initial offline lock attempt; when `--allow-network` is explicitly supplied, online lock generation followed by locked `network-fetch`; deletion of that online-created lock; mandatory `cargo generate-lockfile --offline` from the populated cache; byte-equivalence check against the online lock; then locked offline fetch/test/build. The offline re-resolution is strengthened rather than skipped.
+
 ## DEBT-A11-002 — Secret Service and SQLite do not share an ACID transaction
 
 **Classification:** [FACT] from the platform/storage boundary.
