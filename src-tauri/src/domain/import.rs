@@ -882,7 +882,7 @@ pub fn serialize_portable_bundle_v1(plan: &ImportPlan) -> Result<String, ImportV
         object.insert("id".into(), Value::String(board.id.clone()));
         object.insert("name".into(), Value::String(board.title.clone()));
         object.insert("workspaceId".into(), Value::String(board.workspace_id.clone()));
-        object.entry("archivedAt".into()).or_insert(Value::Null);
+        object.entry("archivedAt").or_insert(Value::Null);
         board_values.push(Value::Object(object));
     }
 

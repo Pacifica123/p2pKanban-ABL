@@ -4,7 +4,7 @@ use rusqlite::{params, Connection, OptionalExtension, Transaction, TransactionBe
 
 use crate::{
     application::import::{ImportApplyReport, ImportRepository, ImportRepositoryError},
-    domain::import::{ImportPlan, ImportSourceKind, ImportedTombstone},
+    domain::import::{ImportPlan, ImportedTombstone},
     infrastructure::profile::ProfileStoragePaths,
 };
 
@@ -255,7 +255,7 @@ mod tests {
     use super::*;
     use crate::{
         application::import::ImportRepository,
-        domain::import::{parse_portable_bundle_v1, ImportedBoard, ImportedColumn, ImportedWorkspace},
+        domain::import::{parse_portable_bundle_v1, ImportSourceKind, ImportedBoard, ImportedColumn, ImportedWorkspace},
     };
     use std::{fs, path::PathBuf, sync::atomic::{AtomicU64, Ordering}};
 

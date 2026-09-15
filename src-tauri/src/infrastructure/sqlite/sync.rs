@@ -214,17 +214,17 @@ fn card_payload(
     object.insert("id".into(), Value::String(id));
     object.insert("boardId".into(), Value::String(board_id));
     object.insert("columnId".into(), Value::String(column_id));
-    object.entry("parentCardId".into()).or_insert(Value::Null);
+    object.entry("parentCardId").or_insert(Value::Null);
     object.insert("title".into(), Value::String(title));
-    object.entry("description".into()).or_insert(Value::Null);
-    object.entry("priority".into()).or_insert(Value::Null);
+    object.entry("description").or_insert(Value::Null);
+    object.entry("priority").or_insert(Value::Null);
     object.insert("position".into(), json!(position));
-    object.entry("startAt".into()).or_insert(Value::Null);
-    object.entry("dueAt".into()).or_insert(Value::Null);
+    object.entry("startAt").or_insert(Value::Null);
+    object.entry("dueAt").or_insert(Value::Null);
     let archived = lifecycle == "archived";
     object.insert("isArchived".into(), Value::Bool(archived));
-    object.entry("labelIds".into()).or_insert_with(|| json!([]));
-    object.entry("createdAt".into()).or_insert_with(|| Value::String(occurred_at.to_owned()));
+    object.entry("labelIds").or_insert_with(|| json!([]));
+    object.entry("createdAt").or_insert_with(|| Value::String(occurred_at.to_owned()));
     object.insert("updatedAt".into(), Value::String(occurred_at.to_owned()));
     object.insert(
         "archivedAt".into(),
@@ -253,7 +253,7 @@ fn checklist_payload(
     object.insert("title".into(), Value::String(title));
     object.insert("position".into(), json!(position));
     object.insert("items".into(), json!([]));
-    object.entry("createdAt".into()).or_insert_with(|| Value::String(occurred_at.to_owned()));
+    object.entry("createdAt").or_insert_with(|| Value::String(occurred_at.to_owned()));
     object.insert("updatedAt".into(), Value::String(occurred_at.to_owned()));
     Ok((card_id, Value::Object(object)))
 }
@@ -290,7 +290,7 @@ fn checklist_item_payload(
         "completedAt".into(),
         if is_done != 0 { Value::String(occurred_at.to_owned()) } else { Value::Null },
     );
-    object.entry("createdAt".into()).or_insert_with(|| Value::String(occurred_at.to_owned()));
+    object.entry("createdAt").or_insert_with(|| Value::String(occurred_at.to_owned()));
     object.insert("updatedAt".into(), Value::String(occurred_at.to_owned()));
     Ok((card_id, checklist_id, Value::Object(object)))
 }

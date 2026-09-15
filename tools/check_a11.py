@@ -179,6 +179,25 @@ for struct_name in ("DeviceIdentityMaterial", "BoardCapabilityMaterial"):
 if "trusted: bool" in app or "trusted=true" in app.lower():
     fail("boolean trust bypass is forbidden in native link provisioning")
 
+# Host Cargo UTS 20260915T073257Z proved two source-level compile defects that
+# deterministic checks must prevent from returning: serde_json::Map::entry keys
+# must not use an unnecessary `.into()` that leaves the generic target ambiguous,
+# and the A09 VaultStatus wire test must initialize/assert the complete status.
+for rel in ["src-tauri/src/domain/import.rs", "src-tauri/src/infrastructure/sqlite/sync.rs"]:
+    source = read(rel)
+    if re.search(r'\.entry\("[^"]+"\.into\(\)\)', source):
+        fail("ambiguous serde_json Map::entry key returned in " + rel)
+desktop_api_source = read("src-tauri/src/desktop_api.rs")
+for token in [
+    "VaultStatus::session_only",
+    "VaultState::ProviderUnavailable",
+    'payload.get("state")',
+    'payload.get("passphraseFallbackAvailable")',
+    "assert_eq!(payload.len(), 4)",
+]:
+    if token not in desktop_api_source:
+        fail("A09 VaultStatus wire regression test drifted: " + token)
+
 adapter = read("src-tauri/src/infrastructure/sqlite/import.rs")
 for token in [
     "SqliteImportRepository",
@@ -300,7 +319,7 @@ next_sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
 if "A12 — labels/comments/activity/appearance parity" not in next_sequence:
     fail("next stage after A11 is not A12 parity")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
-for token in ["CORR-A11-001", "CORR-A11-002", "serde 1.0.228", "no A10b/A09c", "network-fetch", "DEBT-A11-002", "BEGIN IMMEDIATE"]:
+for token in ["CORR-A11-001", "CORR-A11-002", "CORR-A11-003", "serde 1.0.228", "no A10b/A09c", "network-fetch", "DEBT-A11-002", "BEGIN IMMEDIATE"]:
     if token not in debt:
         fail("A11 correction/debt ledger missing " + token)
 

@@ -123,5 +123,9 @@ invariants, source anchors, UTS strictness and SSOT evidence. The canonical
 
 The construction environment has no Cargo toolchain, so Cargo compilation,
 resolver and host Secret Service evidence remain delegated to the user's UTS.
-The first A11 UTS supplied the cache-order failure above; a rerun is required to
-prove the corrected lock→fetch→offline-regenerate sequence on the Arch host.
+The cache-order correction was proven far enough by UTS `20260915T073257Z` to
+reach real offline Rust compilation. That run exposed source-only compile defects:
+ambiguous `serde_json::Map::entry("...".into())` calls and a stale A09
+`VaultStatus` test initializer. Both are corrected inside A11, with deterministic
+guards added; another UTS rerun is required for final Cargo/build/runtime
+acceptance.

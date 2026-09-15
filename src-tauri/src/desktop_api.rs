@@ -458,7 +458,7 @@ mod tests {
     use crate::{
         application::{
             system::HealthView,
-            vault::{VaultMode, VaultStatus},
+            vault::{VaultState, VaultStatus},
         },
         infrastructure::linux::xdg::ProfileDiagnostics,
     };
@@ -495,12 +495,19 @@ mod tests {
 
     #[test]
     fn vault_status_wire_exposes_capability_but_not_secret_operations() {
-        let payload = vault_status_to_wire(VaultStatus {
-            mode: VaultMode::SessionOnly,
-            durable: false,
-        });
+        let payload = vault_status_to_wire(VaultStatus::session_only(
+            VaultState::ProviderUnavailable,
+        ));
         assert_eq!(payload.get("mode").map(String::as_str), Some("session-only"));
+        assert_eq!(
+            payload.get("state").map(String::as_str),
+            Some("provider-unavailable")
+        );
         assert_eq!(payload.get("durable").map(String::as_str), Some("false"));
-        assert_eq!(payload.len(), 2);
+        assert_eq!(
+            payload.get("passphraseFallbackAvailable").map(String::as_str),
+            Some("true")
+        );
+        assert_eq!(payload.len(), 4);
     }
 }

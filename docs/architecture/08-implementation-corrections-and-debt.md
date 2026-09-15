@@ -139,3 +139,14 @@ A11 now makes Cargo preparation ordered and reproducible: initial offline lock a
 **Status:** bounded by fail-closed ordering and compensation; recovery/doctor hardening remains A16.
 
 A11 performs complete validation/preflight, refuses existing vault-key collisions, writes new vault material, then commits the imported graph in one `BEGIN IMMEDIATE` SQLite transaction. Failures after vault writes trigger best-effort deletion of only those new keys. A process crash in the narrow cross-resource window can leave an unreachable orphan vault secret, but not a committed board without its required key and not a partially committed planner graph. A16 recovery tooling may enumerate/clean such unreachable material without changing this security ordering.
+
+
+## CORR-A11-003 — real Cargo compilation exposed ambiguous JSON entry keys and a stale VaultStatus test initializer
+
+**Classification:** [FACT] from canonical A11 UTS `20260915T073257Z`.
+**Architecture impact:** Rust compile/test correctness only; no schema, protocol, privilege, persistence or import semantics change.
+**Status:** corrected inside A11; no A11b stage.
+
+After the cache-order correction allowed Cargo to reach actual compilation, `cargo build --locked --offline` failed on `serde_json::Map::entry("...".into())` at A10/A11 compatibility helpers. With the resolved dependency graph, the extra `.into()` leaves the generic target type ambiguous because multiple crates provide `From<&str>` candidates. A11 removes the unnecessary conversion and passes the `&str` key directly, which is the API's intended `Into<String>` input.
+
+`cargo test --locked --offline` additionally exposed an older A09 unit-test initializer that constructed `VaultStatus` with only `mode`/`durable`, while the current A09 contract also requires `state` and `passphrase_fallback_available`. The test now constructs `VaultStatus::session_only(VaultState::ProviderUnavailable)` and asserts all four wire fields. Two imports made obsolete by A11 wiring are removed to keep the host build clean. Deterministic A11 checks now reject reintroduction of the ambiguous `Map::entry` form and require the complete VaultStatus wire regression assertion.

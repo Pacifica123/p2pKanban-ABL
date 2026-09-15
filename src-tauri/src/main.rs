@@ -7,7 +7,6 @@ mod navigation_policy;
 use application::{
     import::ImportService,
     planner::{PlannerService, RandomPlannerIds},
-    vault::VaultService,
     workspace::{RandomUuidGenerator, WorkspaceService},
 };
 use infrastructure::{

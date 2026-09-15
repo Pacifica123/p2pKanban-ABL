@@ -122,6 +122,9 @@ for key,value in expected.items():
 evolving_after_a10={
     'src-tauri/Cargo.toml',
     'src-tauri/src/infrastructure/sqlite/migration.rs',
+    # Later stages may make compile-only compatibility edits in the A10 adapter
+    # while the semantic contract above remains the authoritative regression gate.
+    'src-tauri/src/infrastructure/sqlite/sync.rs',
     'tools/check_a10.py',
     'tools/uts_plan.json',
 }
