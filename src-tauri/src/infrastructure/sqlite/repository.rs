@@ -103,23 +103,34 @@ fn next_local_clock(tx: &Transaction<'_>) -> Result<(u64, String), RepositoryErr
     Ok((next, origin))
 }
 
+#[derive(Debug, Clone)]
+struct PendingDescriptor {
+    board_id: BoardId,
+    kind: &'static str,
+    entity_id: String,
+    version: Option<VersionStamp>,
+}
+
 fn enqueue_pending(
     tx: &Transaction<'_>,
     workspace_id: &WorkspaceId,
-    board_id: &BoardId,
-    kind: &str,
-    entity_id: &str,
+    descriptor: &PendingDescriptor,
 ) -> Result<(), RepositoryError> {
-    let (sequence, _) = next_local_clock(tx)?;
+    let (id, sequence) = if let Some(version) = &descriptor.version {
+        (version.event_id.clone(), version.logical_clock)
+    } else {
+        let (sequence, _) = next_local_clock(tx)?;
+        (Uuid::new_v4().to_string(), sequence)
+    };
     tx.execute(
         "INSERT INTO pending_local_changes(id, workspace_id, board_id, sequence, kind, entity_id, created_at_unix_ms) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
-            Uuid::new_v4().to_string(),
+            id,
             workspace_id.as_str(),
-            board_id.as_str(),
+            descriptor.board_id.as_str(),
             sequence.to_string(),
-            kind,
-            entity_id,
+            descriptor.kind,
+            descriptor.entity_id,
             epoch_millis(),
         ],
     )
@@ -574,36 +585,62 @@ fn apply_mutation(
     Ok(())
 }
 
-fn card_pending_descriptor(
+fn card_pending_descriptors(
     tx: &Transaction<'_>,
     mutation: &PlannerMutation,
-) -> Result<(BoardId, &'static str, String), RepositoryError> {
+) -> Result<Vec<PendingDescriptor>, RepositoryError> {
+    let one = |board_id: BoardId, kind: &'static str, entity_id: String, version: Option<VersionStamp>| {
+        vec![PendingDescriptor { board_id, kind, entity_id, version }]
+    };
     match mutation {
-        PlannerMutation::CreateCard(card) => Ok((card.board_id.clone(), "card.create", card.id.as_str().to_owned())),
+        PlannerMutation::CreateCard(card) => Ok(one(
+            card.board_id.clone(),
+            "card.create",
+            card.id.as_str().to_owned(),
+            None,
+        )),
         PlannerMutation::MoveCard { card_id, .. } => {
             let card = card_by_id(tx, card_id)?.ok_or(RepositoryError::CardNotFound)?;
-            Ok((card.board_id, "card.move", card_id.as_str().to_owned()))
+            Ok(one(card.board_id, "card.move", card_id.as_str().to_owned(), None))
         }
         PlannerMutation::SetCardArchived { card_id, archived } => {
             let card = card_by_id(tx, card_id)?.ok_or(RepositoryError::CardNotFound)?;
-            Ok((
+            Ok(one(
                 card.board_id,
                 if *archived { "card.archive" } else { "card.unarchive" },
                 card_id.as_str().to_owned(),
+                None,
             ))
         }
-        PlannerMutation::DeleteCard { card_id, .. } => {
-            if let Some(card) = card_by_id(tx, card_id)? {
-                return Ok((card.board_id, "card.delete", card_id.as_str().to_owned()));
-            }
-            let tombstone = tombstone_by_id(tx, card_id)?.ok_or(RepositoryError::CardNotFound)?;
-            Ok((tombstone.board_id, "card.delete", card_id.as_str().to_owned()))
+        PlannerMutation::DeleteCard { card_id, version } => {
+            let board_id = if let Some(card) = card_by_id(tx, card_id)? {
+                card.board_id
+            } else {
+                tombstone_by_id(tx, card_id)?
+                    .ok_or(RepositoryError::CardNotFound)?
+                    .board_id
+            };
+            Ok(one(
+                board_id,
+                "card.delete",
+                card_id.as_str().to_owned(),
+                Some(version.clone()),
+            ))
         }
-        PlannerMutation::ReorderColumn { column_id, .. } => Ok((
-            column_board(tx, column_id)?,
-            "card.reorder",
-            column_id.as_str().to_owned(),
-        )),
+        PlannerMutation::ReorderColumn { column_id, positions } => {
+            let board_id = column_board(tx, column_id)?;
+            // A10 stops generating the legacy aggregate card.reorder marker. Each affected card
+            // receives its own card.move marker/version so roaming events have unique identities.
+            Ok(positions
+                .iter()
+                .map(|(card_id, _)| PendingDescriptor {
+                    board_id: board_id.clone(),
+                    kind: "card.move",
+                    entity_id: card_id.as_str().to_owned(),
+                    version: None,
+                })
+                .collect())
+        }
     }
 }
 
@@ -676,9 +713,11 @@ impl PlannerRepository for SqlitePlannerRepository {
             });
         }
         for mutation in transaction.mutations {
-            let (board_id, kind, entity_id) = card_pending_descriptor(&tx, &mutation)?;
+            let pending = card_pending_descriptors(&tx, &mutation)?;
             apply_mutation(&tx, &transaction.workspace_id, mutation)?;
-            enqueue_pending(&tx, &transaction.workspace_id, &board_id, kind, &entity_id)?;
+            for descriptor in pending {
+                enqueue_pending(&tx, &transaction.workspace_id, &descriptor)?;
+            }
         }
         tx.commit().map_err(storage_failure)
     }
@@ -855,50 +894,69 @@ fn apply_feature_mutation(
     Ok(())
 }
 
-fn feature_pending_descriptor(
+fn feature_pending_descriptors(
     tx: &Transaction<'_>,
     mutation: &PlannerFeatureMutation,
-) -> Result<(BoardId, &'static str, String), RepositoryError> {
+) -> Result<Vec<PendingDescriptor>, RepositoryError> {
+    let one = |board_id: BoardId, kind: &'static str, entity_id: String, version: Option<VersionStamp>| {
+        vec![PendingDescriptor { board_id, kind, entity_id, version }]
+    };
     match mutation {
-        PlannerFeatureMutation::CreateColumn(column) => Ok((
+        PlannerFeatureMutation::CreateColumn(column) => Ok(one(
             column.board_id.clone(),
             "column.create",
             column.id.as_str().to_owned(),
+            None,
         )),
-        PlannerFeatureMutation::CreateChecklist(checklist) => Ok((
+        PlannerFeatureMutation::CreateChecklist(checklist) => Ok(one(
             checklist.board_id.clone(),
             "checklist.create",
             checklist.id.as_str().to_owned(),
+            None,
         )),
         PlannerFeatureMutation::CreateChecklistItem(item) => {
             let checklist = checklist_by_id(tx, &item.checklist_id)?
                 .ok_or(RepositoryError::ChecklistNotFound)?;
-            Ok((checklist.board_id, "checklist.item.create", item.id.as_str().to_owned()))
+            Ok(one(checklist.board_id, "checklist.item.create", item.id.as_str().to_owned(), None))
         }
         PlannerFeatureMutation::SetChecklistItemDone { item_id, .. } => {
             let item = checklist_item_by_id(tx, item_id)?
                 .ok_or(RepositoryError::ChecklistItemNotFound)?;
             let checklist = checklist_by_id(tx, &item.checklist_id)?
                 .ok_or(RepositoryError::ChecklistNotFound)?;
-            Ok((checklist.board_id, "checklist.item.update", item_id.as_str().to_owned()))
+            Ok(one(checklist.board_id, "checklist.item.update", item_id.as_str().to_owned(), None))
         }
-        PlannerFeatureMutation::DeleteChecklist { checklist_id, .. } => {
-            if let Some(checklist) = checklist_by_id(tx, checklist_id)? {
-                return Ok((checklist.board_id, "checklist.delete", checklist_id.as_str().to_owned()));
-            }
-            let tombstone = checklist_tombstone_by_id(tx, checklist_id)?
-                .ok_or(RepositoryError::ChecklistNotFound)?;
-            Ok((tombstone.board_id, "checklist.delete", checklist_id.as_str().to_owned()))
+        PlannerFeatureMutation::DeleteChecklist { checklist_id, version } => {
+            let board_id = if let Some(checklist) = checklist_by_id(tx, checklist_id)? {
+                checklist.board_id
+            } else {
+                checklist_tombstone_by_id(tx, checklist_id)?
+                    .ok_or(RepositoryError::ChecklistNotFound)?
+                    .board_id
+            };
+            Ok(one(
+                board_id,
+                "checklist.delete",
+                checklist_id.as_str().to_owned(),
+                Some(version.clone()),
+            ))
         }
-        PlannerFeatureMutation::DeleteChecklistItem { item_id, .. } => {
-            if let Some(item) = checklist_item_by_id(tx, item_id)? {
-                let checklist = checklist_by_id(tx, &item.checklist_id)?
-                    .ok_or(RepositoryError::ChecklistNotFound)?;
-                return Ok((checklist.board_id, "checklist.item.delete", item_id.as_str().to_owned()));
-            }
-            let tombstone = checklist_item_tombstone_by_id(tx, item_id)?
-                .ok_or(RepositoryError::ChecklistItemNotFound)?;
-            Ok((tombstone.board_id, "checklist.item.delete", item_id.as_str().to_owned()))
+        PlannerFeatureMutation::DeleteChecklistItem { item_id, version } => {
+            let board_id = if let Some(item) = checklist_item_by_id(tx, item_id)? {
+                checklist_by_id(tx, &item.checklist_id)?
+                    .ok_or(RepositoryError::ChecklistNotFound)?
+                    .board_id
+            } else {
+                checklist_item_tombstone_by_id(tx, item_id)?
+                    .ok_or(RepositoryError::ChecklistItemNotFound)?
+                    .board_id
+            };
+            Ok(one(
+                board_id,
+                "checklist.item.delete",
+                item_id.as_str().to_owned(),
+                Some(version.clone()),
+            ))
         }
     }
 }
@@ -1036,9 +1094,11 @@ impl PlannerFeatureRepository for SqlitePlannerRepository {
             });
         }
         for mutation in transaction.mutations {
-            let (board_id, kind, entity_id) = feature_pending_descriptor(&tx, &mutation)?;
+            let pending = feature_pending_descriptors(&tx, &mutation)?;
             apply_feature_mutation(&tx, &transaction.workspace_id, mutation)?;
-            enqueue_pending(&tx, &transaction.workspace_id, &board_id, kind, &entity_id)?;
+            for descriptor in pending {
+                enqueue_pending(&tx, &transaction.workspace_id, &descriptor)?;
+            }
         }
         tx.commit().map_err(storage_failure)
     }
@@ -1060,9 +1120,11 @@ impl SqlitePlannerRepository {
             });
         }
         for mutation in transaction.mutations {
-            let (board_id, kind, entity_id) = card_pending_descriptor(&tx, &mutation)?;
+            let pending = card_pending_descriptors(&tx, &mutation)?;
             apply_mutation(&tx, &transaction.workspace_id, mutation)?;
-            enqueue_pending(&tx, &transaction.workspace_id, &board_id, kind, &entity_id)?;
+            for descriptor in pending {
+                enqueue_pending(&tx, &transaction.workspace_id, &descriptor)?;
+            }
         }
         Err(RepositoryError::StorageFailure)
     }

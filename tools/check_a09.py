@@ -26,7 +26,7 @@ cargo = read("src-tauri/Cargo.toml")
 for token in (
     'secret-service = { version = "=5.2.0", default-features = false, features = ["rt-tokio-crypto-rust"] }', 'argon2 = "=0.6.0"',
     'chacha20poly1305 = "=0.10.1"',
-    'getrandom = "=0.4.3"',
+    'getrandom = "=0.4.2"',
 ):
     if token not in cargo: fail("missing exact-pinned A09 dependency: " + token)
 

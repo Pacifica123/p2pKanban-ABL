@@ -278,3 +278,6 @@ The implementation is ready to replace the current browser+Docker path only when
 - recover/export data using `doctor`/safe mode even if WebKitGTK fails;
 - uninstall/reinstall without unintended data loss;
 - show through process/socket/dependency inspection that there is no hidden external local runtime or always-on daemon.
+
+
+**[FACT — implementation status after A10 source gate]** A09b removed the yanked AEAD dependency, but fresh-host UTS exposed a second exact `getrandom 0.4.3` offline resolver conflict; A10 corrects it to 0.4.2 while keeping the final offline re-resolution gate strict. A10 implements the local sync-core/roaming compatibility boundary, schema v4 protocol state, deterministic Android/web conformance vectors and a transport-simulation drop/reorder/replay convergence harness. A live Nostr relay coordinator and device-link provisioning are not claimed; A11 remains next after A10 UTS.

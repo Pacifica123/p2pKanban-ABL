@@ -1,6 +1,7 @@
 pub mod planner;
 pub mod repository;
 pub mod system;
+pub mod sync;
 pub mod vault;
 pub mod workspace;
 

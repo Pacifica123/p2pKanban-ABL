@@ -24,7 +24,7 @@ for token in ('XChaCha20Poly1305','XNonce','aead::{Aead, KeyInit, Payload}'):
     if token not in impl: fail("vault AEAD API contract drifted: " + token)
 
 plan=json.loads(read("tools/uts_plan.json"))
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A09b": fail("UTS plan did not advance to A09b")
+if plan.get("schemaVersion") != 1: fail("UTS plan schema drifted")
 ids=[x.get("id") for x in plan.get("deterministic",[])]
 for rid in ("a09","a09b"):
     if rid not in ids: fail("missing deterministic gate " + rid)

@@ -158,9 +158,9 @@ status = read("docs/IMPLEMENTATION_STATUS.md")
 line = next((line for line in status.splitlines() if "A04 repository semantic contract suite" in line), "")
 if "**implemented" not in line or "A05" not in line:
     fail("implementation ledger did not advance A04 to implemented/A05")
-sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A05" not in sequence:
-    fail("next-patch sequence lost the A05 architecture stage")
+# A04 history is permanent in the implementation ledger; NEXT_PATCH_SEQUENCE is intentionally current-stage only.
+if "| A05 " not in status:
+    fail("implementation ledger lost the A05 architecture stage following A04")
 
 doc = read("docs/evidence/A04_REPOSITORY_CONTRACTS.md")
 for token in ("Fact", "Inference", "Proposal", "Unresolved", "1024", "1000", "A05"):

@@ -134,10 +134,11 @@ for token in (
 ):
     if token not in repo:
         fail("SQLite A08 repository evidence missing " + token)
-# Pending marker must be inserted before the same transaction commits for both mutation families.
+# Pending markers must still be derived/applied/enqueued inside the same Immediate transaction.
+# A10 enriches markers with VersionStamp identity before the mutation; A08 atomicity must remain intact.
 for sequence in (
-    r"apply_mutation\(&tx, &transaction\.workspace_id, mutation\)\?;\s*enqueue_pending\(&tx, &transaction\.workspace_id, &board_id, kind, &entity_id\)\?;",
-    r"apply_feature_mutation\(&tx, &transaction\.workspace_id, mutation\)\?;\s*enqueue_pending\(&tx, &transaction\.workspace_id, &board_id, kind, &entity_id\)\?;",
+    r"let pending = card_pending_descriptors\(&tx, &mutation\)\?;\s*apply_mutation\(&tx, &transaction\.workspace_id, mutation\)\?;\s*for descriptor in pending \{\s*enqueue_pending\(&tx, &transaction\.workspace_id, &descriptor\)\?;\s*\}",
+    r"let pending = feature_pending_descriptors\(&tx, &mutation\)\?;\s*apply_feature_mutation\(&tx, &transaction\.workspace_id, mutation\)\?;\s*for descriptor in pending \{\s*enqueue_pending\(&tx, &transaction\.workspace_id, &descriptor\)\?;\s*\}",
 ):
     if not re.search(sequence, repo, re.S):
         fail("mutation and pending marker no longer share the expected transaction sequence")

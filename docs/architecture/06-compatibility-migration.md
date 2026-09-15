@@ -239,3 +239,8 @@ This fixture suite is a stronger compatibility contract than forcing all clients
 | Desktop SQLite bytes | no public promise | internal backup only |
 | Secret Service/KWallet item representation | no | vault adapter private detail |
 | Package file format | Arch-specific | pacman/AppImage release contract |
+
+
+## A10 compatibility correction
+
+**[FACT — A10 correction]** Source inspection supersedes two stale A00 fixture details: web `sync/1` rejects generic `put` and Android `roaming/1` wraps card state under `payload.card`. The fixtures are corrected rather than widening either protocol. A fixed synthetic Android crypto vector plus seed-only `board.snapshot`, replay/tombstone and capability-epoch tests now form the desktop conformance gate. Legacy roaming/1 still has no post-snapshot column mutation operation; native fails such markers closed. A10 additionally carries the A09b fresh-host Cargo correction (`getrandom 0.4.3` → `0.4.2`) and a deterministic relay-disruption convergence harness; neither change alters wire protocol semantics.

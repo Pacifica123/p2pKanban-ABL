@@ -17,11 +17,11 @@
   "sources": [
     {
       "path": "docs/architecture/03-components-data-storage-sync-security.md",
-      "sha256": "e283ceb8d5fc33176fbb67b23a06fb8ab040af95d0ee5df0d83bdade083702e5"
+      "sha256": "fce89266e70a17e41cbd981f6bfe42168e14c9eb5da4dd60d1d631962f7be05b"
     },
     {
       "path": "docs/architecture/06-compatibility-migration.md",
-      "sha256": "acbc117c4bcdc4eaaf17f7f13e24361068e688a0359c69ab31a45907d4fb2d5e"
+      "sha256": "147fe97b91130ca10a4d99e3b46ad30856f13953f08e14de4dbbf2afc68bbc80"
     },
     {
       "path": "docs/architecture/adr/ADR-004-secrets.md",

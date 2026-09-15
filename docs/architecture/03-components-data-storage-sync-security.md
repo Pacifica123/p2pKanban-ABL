@@ -315,3 +315,8 @@ Long-term goal is to remove this bridge once device-link/native transports cover
 - capability epoch changes invalidate obsolete write authority without deleting already valid local history;
 - imports/link operations are staged and atomic; empty-profile requirement is preserved where existing web-node-link v1 requires it;
 - schema negotiation and protocol negotiation are separate: a new local schema version must not silently imply a new wire version.
+
+
+## A10 implementation note
+
+**[FACT — A10 implementation]** The native repository now contains a storage-independent sync domain/application boundary and a SQLite protocol adapter. A08 pending identities are materialized transactionally into a separate roaming outbox; seen-event digests, field versions, tombstones and opaque extension JSON prevent replay/resurrection and avoid destructive narrowing of richer Android card payloads. Incoming Lamport clocks advance the local clock floor. Board capability keys remain behind `SecretVault`. A10 includes a transport-neutral drop/reorder/replay convergence harness, but live Nostr relay transport/coordinator behavior is not implemented.

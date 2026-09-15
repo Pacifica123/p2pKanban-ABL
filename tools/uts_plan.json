@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A09b",
-  "description": "Canonical UserTestSpace verification through A09b. A09b corrects the A09 AEAD dependency graph after real UTS rejected a yanked transitive chacha20 release; final Cargo acceptance remains offline.",
+  "stage": "A10",
+  "description": "Canonical UserTestSpace verification through A10. A10 adds deterministic sync/1 + roaming/1 core, Android-compatible crypto/merge vectors, SQLite outbox/materialization and remote replay/tombstone/capability-epoch semantics; no relay coordinator or device-link import is claimed.",
   "deterministic": [
     {
       "id": "a00",
@@ -154,6 +154,14 @@
         "-B",
         "tools/check_a09b.py"
       ]
+    },
+    {
+      "id": "a10",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a10.py"
+      ]
     }
   ],
   "frontend": {
@@ -302,6 +310,20 @@
           "--report",
           "{report_dir}/a09-secret-service.json"
         ]
+      },
+      {
+        "id": "a10-sync-compatibility",
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "src-tauri/Cargo.toml",
+          "--locked",
+          "--offline",
+          "a10_",
+          "--",
+          "--nocapture"
+        ]
       }
     ]
   },
@@ -314,9 +336,10 @@
     "A07 UI: confirm vault status is session-only and durable secrets are disabled; no secret value should ever be rendered",
     "A08 UI: create a column, card, checklist and checklist item; move/archive/restore the card and toggle the item, then close/reopen and confirm durable state",
     "A08 UI: delete a checklist/item/card and confirm it does not reappear after reopen",
-    "A08 pending count is local-only evidence; do not interpret it as remote convergence before A10",
     "A09 UI: vault status may be secret-service/ready+durable or session-only/provider-unavailable|provider-locked|provider-corrupt; provider absence is a supported degraded state, not a reason to store plaintext secrets",
     "A09 provider matrix across GNOME Secret Service, KWallet Secret Service compatibility and a minimal/no-provider session remains multi-host evidence; one UTS host does not prove the whole matrix",
-    "A09 passphrase provider is implemented/tested in Rust but passphrase activation is intentionally not exposed as a generic WebView secret IPC before credential provisioning/onboarding exists"
+    "A09 passphrase provider is implemented/tested in Rust but passphrase activation is intentionally not exposed as a generic WebView secret IPC before credential provisioning/onboarding exists",
+    "A10: sync_outbox/merge/crypto are fixture- and Rust-test verified, but relay publish/pull orchestration is not implemented yet; do not treat pending/outbox rows as relay ACK or multi-node convergence evidence",
+    "A10 roaming/1 cannot represent post-snapshot column creation in the legacy Android protocol; such local markers fail closed instead of being silently dropped"
   ]
 }

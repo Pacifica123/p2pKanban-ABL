@@ -48,9 +48,9 @@ for token in ("FACT", "INFERENCE", "PROPOSAL", "UNRESOLVED EXPERIMENT", "tools/u
 status = read("docs/IMPLEMENTATION_STATUS.md")
 if "A01a+A01b+A01c" not in status or "partially implemented" not in status:
     fail("implementation ledger must retain honest A01c partial status")
-next_doc = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A03" not in next_doc or "UserTestSpace" not in next_doc:
-    fail("post-A02 SSOT must retain A03 history and delegate host verification")
+# Historical A01c regression evidence must survive later stages without freezing NEXT_PATCH_SEQUENCE.
+if "| A03 Rust application/domain boundary" not in status or "tools/uts_verify.py" not in evidence:
+    fail("post-A02 SSOT must retain A03 history and delegated host verification")
 
 # A01c must not fabricate generated evidence it could not execute.
 if (ROOT / "src-tauri/Cargo.lock").exists():

@@ -10,7 +10,11 @@
   "entityType": "card",
   "entityId": "018f0000-0000-7000-8000-000000000003",
   "operation": "card.delete",
-  "fieldMask": ["__lifecycle"],
-  "payload": {},
+  "fieldMask": [
+    "__lifecycle"
+  ],
+  "payload": {
+    "deletedAt": "2026-09-12T00:00:01Z"
+  },
   "occurredAt": "2026-09-12T00:00:01Z"
 }

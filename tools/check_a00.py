@@ -130,9 +130,9 @@ def check_status_ledger() -> None:
     a00_line = next((line for line in text.splitlines() if "A00 evidence baseline" in line), "")
     if "**implemented**" not in a00_line:
         fail("A00 evidence baseline must remain implemented as later stages advance")
-    next_text = (ROOT / "docs/NEXT_PATCH_SEQUENCE.md").read_text(encoding="utf-8")
-    if "A01" not in next_text or "A02" not in next_text:
-        fail("implementation sequence must preserve the A01 -> A02 ordering")
+    roadmap = (ROOT / "docs/architecture/07-roadmap-devctl-tests-experiments-do-not.md").read_text(encoding="utf-8")
+    if "| A01 |" not in roadmap or "| A02 |" not in roadmap or roadmap.index("| A01 |") >= roadmap.index("| A02 |"):
+        fail("architecture roadmap must preserve the A01 -> A02 ordering")
     debt = (ROOT / "docs/architecture/08-implementation-corrections-and-debt.md").read_text(encoding="utf-8")
     if "DEBT-A00-001" not in debt or "seed commit" not in debt or "git reset --hard HEAD" not in debt:
         fail("devctl commitless-repository rollback debt must stay explicit")

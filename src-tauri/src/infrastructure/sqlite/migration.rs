@@ -9,9 +9,9 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::infrastructure::profile::{write_private_file, ProfileStoragePaths};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 3;
-pub const MIN_READER_SCHEMA_VERSION: u32 = 3;
-pub const MIN_WRITER_SCHEMA_VERSION: u32 = 3;
+pub const CURRENT_SCHEMA_VERSION: u32 = 4;
+pub const MIN_READER_SCHEMA_VERSION: u32 = 4;
+pub const MIN_WRITER_SCHEMA_VERSION: u32 = 4;
 pub const BUSY_TIMEOUT_MS: u64 = 2_500;
 
 pub const MIGRATION_V0_TO_V1_ID: &str = "desktop-0001-initial-planner";
@@ -20,10 +20,13 @@ pub const MIGRATION_V1_TO_V2_ID: &str = "desktop-0002-workspace-board-titles";
 pub const MIGRATION_V1_TO_V2_SHA256: &str = "01cdfaa3b020e1fbab4abbd45640f0726aa43d08bd1f20837856300dedbe1901";
 pub const MIGRATION_V2_TO_V3_ID: &str = "desktop-0003-planner-slice";
 pub const MIGRATION_V2_TO_V3_SHA256: &str = "ebcec1f2d34192257a11b497155bfec84937f6fc7de8edbed35bb0a67569dd48";
+pub const MIGRATION_V3_TO_V4_ID: &str = "desktop-0004-sync-core";
+pub const MIGRATION_V3_TO_V4_SHA256: &str = "d975a65e66c6f4208d97e1a9d8e8c07b3dd6fe1070ebe32e894da3bfc0b0999a";
 
 const SCHEMA_V1: &str = include_str!("../../../migrations/0001_initial.sql");
 const SCHEMA_V2: &str = include_str!("../../../migrations/0002_workspace_board_titles.sql");
 const SCHEMA_V3: &str = include_str!("../../../migrations/0003_planner_slice.sql");
+const SCHEMA_V4: &str = include_str!("../../../migrations/0004_sync_core.sql");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProfileSchemaInfo {
@@ -160,11 +163,20 @@ fn apply_v1_to_v2(conn: &mut Connection) -> Result<(), ProfileOpenError> {
     Ok(())
 }
 
-fn apply_v2_to_v3(conn: &mut Connection, force_failure: bool) -> Result<(), ProfileOpenError> {
+fn apply_v2_to_v3(conn: &mut Connection) -> Result<(), ProfileOpenError> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
     tx.execute_batch(SCHEMA_V3)?;
     let applied_at = epoch_millis();
     record_migration(&tx, MIGRATION_V2_TO_V3_ID, MIGRATION_V2_TO_V3_SHA256, applied_at)?;
+    tx.commit()?;
+    Ok(())
+}
+
+fn apply_v3_to_v4(conn: &mut Connection, force_failure: bool) -> Result<(), ProfileOpenError> {
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    tx.execute_batch(SCHEMA_V4)?;
+    let applied_at = epoch_millis();
+    record_migration(&tx, MIGRATION_V3_TO_V4_ID, MIGRATION_V3_TO_V4_SHA256, applied_at)?;
     if force_failure {
         return Err(ProfileOpenError::MigrationRecovered);
     }
@@ -188,7 +200,7 @@ fn migrate_if_needed(
     if from == CURRENT_SCHEMA_VERSION {
         return Ok(());
     }
-    if from > 2 {
+    if from > 3 {
         return Err(ProfileOpenError::UnsupportedSchema {
             found: from,
             max_writer: CURRENT_SCHEMA_VERSION,
@@ -218,7 +230,11 @@ fn migrate_if_needed(
             current = pragma_user_version(conn)?;
         }
         if current == 2 {
-            apply_v2_to_v3(conn, force_failure)?;
+            apply_v2_to_v3(conn)?;
+            current = pragma_user_version(conn)?;
+        }
+        if current == 3 {
+            apply_v3_to_v4(conn, force_failure)?;
         }
         if pragma_user_version(conn)? != CURRENT_SCHEMA_VERSION {
             return Err(ProfileOpenError::InvalidSchemaMetadata);
@@ -250,6 +266,7 @@ fn verify_migration_line(conn: &Connection) -> Result<(), ProfileOpenError> {
         (MIGRATION_V0_TO_V1_ID.to_owned(), MIGRATION_V0_TO_V1_SHA256.to_owned()),
         (MIGRATION_V1_TO_V2_ID.to_owned(), MIGRATION_V1_TO_V2_SHA256.to_owned()),
         (MIGRATION_V2_TO_V3_ID.to_owned(), MIGRATION_V2_TO_V3_SHA256.to_owned()),
+        (MIGRATION_V3_TO_V4_ID.to_owned(), MIGRATION_V3_TO_V4_SHA256.to_owned()),
     ];
     if observed != expected {
         return Err(ProfileOpenError::InvalidSchemaMetadata);
@@ -328,9 +345,9 @@ mod tests {
         let layout = temp_profile("pragmas");
         cleanup(&layout);
         let (conn, info) = open_profile(&layout).unwrap();
-        assert_eq!(info.schema_version, 3);
-        assert_eq!(info.min_reader, 3);
-        assert_eq!(info.min_writer, 3);
+        assert_eq!(info.schema_version, 4);
+        assert_eq!(info.min_reader, 4);
+        assert_eq!(info.min_writer, 4);
         let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |row| row.get(0)).unwrap();
         let sync: i64 = conn.query_row("PRAGMA synchronous", [], |row| row.get(0)).unwrap();
         let mode: String = conn.query_row("PRAGMA journal_mode", [], |row| row.get(0)).unwrap();
@@ -344,7 +361,7 @@ mod tests {
     }
 
     #[test]
-    fn v1_profile_migrates_to_v3_and_preserves_workspace_board_identity() {
+    fn v1_profile_migrates_to_v4_and_preserves_workspace_board_identity() {
         let layout = temp_profile("v1-to-v2");
         cleanup(&layout);
         layout.prepare().unwrap();
@@ -362,7 +379,7 @@ mod tests {
             ).unwrap();
         }
         let (conn, info) = open_profile(&layout).unwrap();
-        assert_eq!(info.schema_version, 3);
+        assert_eq!(info.schema_version, 4);
         let row: (String, String, String, String) = conn.query_row(
             "SELECT w.id, w.title, b.id, b.title FROM workspaces w JOIN boards b ON b.workspace_id=w.id",
             [],
@@ -376,6 +393,51 @@ mod tests {
 
     #[test]
     fn a08_v2_profile_migrates_to_v3_preserving_existing_planner_identity() {
+        let layout = temp_profile("a08-v2-to-v3-regression");
+        cleanup(&layout);
+        layout.prepare().unwrap();
+        let mut conn = Connection::open(layout.database()).unwrap();
+        configure_connection(&conn, true).unwrap();
+        apply_v0_to_v1(&mut conn).unwrap();
+        apply_v1_to_v2(&mut conn).unwrap();
+        conn.execute(
+            "INSERT INTO workspaces(id, access_epoch, title) VALUES ('workspace-a08-regression', '7', 'workspace')",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO boards(id, workspace_id, title) VALUES ('board-a08-regression', 'workspace-a08-regression', 'board')",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO columns(id, board_id) VALUES ('column-a08-regression', 'board-a08-regression')",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO cards(id, workspace_id, board_id, column_id, title, position, lifecycle) VALUES ('card-a08-regression', 'workspace-a08-regression', 'board-a08-regression', 'column-a08-regression', 'card', 1000.0, 'active')",
+            [],
+        ).unwrap();
+
+        apply_v2_to_v3(&mut conn).unwrap();
+        let version: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0)).unwrap();
+        assert_eq!(version, 3);
+        let row: (String, String, String, String) = conn.query_row(
+            "SELECT w.id, b.id, c.id, k.id FROM workspaces w JOIN boards b ON b.workspace_id=w.id JOIN columns c ON c.board_id=b.id JOIN cards k ON k.column_id=c.id",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        ).unwrap();
+        assert_eq!(row, (
+            "workspace-a08-regression".into(),
+            "board-a08-regression".into(),
+            "column-a08-regression".into(),
+            "card-a08-regression".into(),
+        ));
+        check_integrity(&conn).unwrap();
+        drop(conn);
+        cleanup(&layout);
+    }
+
+    #[test]
+    fn a10_v2_profile_migrates_to_v4_preserving_existing_planner_identity() {
         let layout = temp_profile("v2-to-v3");
         cleanup(&layout);
         layout.prepare().unwrap();
@@ -403,7 +465,7 @@ mod tests {
         }
 
         let (conn, info) = open_profile(&layout).unwrap();
-        assert_eq!(info.schema_version, 3);
+        assert_eq!(info.schema_version, 4);
         let row: (String, String, String, String) = conn.query_row(
             "SELECT w.id, b.id, c.id, k.id FROM workspaces w JOIN boards b ON b.workspace_id=w.id JOIN columns c ON c.board_id=b.id JOIN cards k ON k.column_id=c.id",
             [],
@@ -433,7 +495,7 @@ mod tests {
         let result = open_profile(&layout);
         assert!(matches!(
             result,
-            Err(ProfileOpenError::UnsupportedSchema { found: 99, max_writer: 3 })
+            Err(ProfileOpenError::UnsupportedSchema { found: 99, max_writer: 4 })
         ));
         cleanup(&layout);
     }

@@ -8,8 +8,11 @@
     "replicaSeq": 7,
     "entityType": "card",
     "entityId": "018f0000-0000-7000-8000-000000000301",
-    "operation": "put",
-    "fieldMask": ["title", "position"],
+    "operation": "update",
+    "fieldMask": [
+      "title",
+      "position"
+    ],
     "logicalClock": 12,
     "baseServerOrder": 5,
     "payload": {

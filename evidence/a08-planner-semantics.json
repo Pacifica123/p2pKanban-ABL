@@ -43,11 +43,11 @@
     },
     {
       "path": "src-tauri/src/infrastructure/sqlite/repository.rs",
-      "sha256": "32097b330ad369e582f14e41a1c668283ac4f780e314ada668cec5f743f53395"
+      "sha256": "b6d4222b1796bee120e8d5c34759d3240a4523b033c6da06d91744d28c45d2eb"
     },
     {
       "path": "docs/architecture/03-components-data-storage-sync-security.md",
-      "sha256": "e283ceb8d5fc33176fbb67b23a06fb8ab040af95d0ee5df0d83bdade083702e5"
+      "sha256": "fce89266e70a17e41cbd981f6bfe42168e14c9eb5da4dd60d1d631962f7be05b"
     }
   ]
 }

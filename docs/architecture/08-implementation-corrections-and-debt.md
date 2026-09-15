@@ -95,3 +95,20 @@ Deterministic source gates must answer “is forbidden/generated state owned by 
 **Status:** implemented in A02c.
 
 The canonical verifier now reruns the entire deterministic gate list after frontend/Cargo/runtime steps. This makes state-pollution bugs observable during the same invocation that created the state. The verifier does not use `git clean`, resets, or cache deletion to manufacture a pass.
+
+
+## A10 — protocol fixture corrections and roaming gap
+
+- **Corrected:** A00 `sync-envelope-v1` used operation `put`, but the actual web sync-core allowlist does not. A10 changes it to `update`.
+- **Corrected:** A00 roaming card-put payload did not match Android `service.ts`; A10 uses `payload.card` and a `deletedAt` delete payload.
+- **Corrected:** future local delete pending IDs now reuse their tombstone `VersionStamp`, and future reorder emits one uniquely versioned `card.move` marker per card.
+- **Unresolved compatibility debt:** `p2p-kanban-roaming/1` has no column-create/update event after initial snapshot. This is the **post-snapshot column mutation** gap. A10 blocks such pending markers; it does not invent an incompatible extension. Relay orchestration remains a later transport layer, not part of A10.
+
+
+## CORR-A10-001 — A09b exact getrandom 0.4.3 pin broke fresh-host offline re-resolution
+
+**Classification:** [FACT] from canonical A09b UTS on a different Arch-family machine.  
+**Architecture impact:** build/offline dependency resolution only; A09 secret-at-rest semantics and provider boundaries are unchanged.  
+**Status:** corrected inside A10; no separate A09c stage.
+
+After network preparation, `cargo generate-lockfile --offline` selected `secret-service 5.2.0` against the locally cached `getrandom ^0.4` index line, where `0.4.2` was available, while the application still forced exact `getrandom 0.4.3`. The resulting resolver conflict blocked Cargo test/build even though deterministic/frontend checks were green. A10 aligns the direct pin to **getrandom 0.4.2** rather than weakening the offline re-resolution gate. `getrandom 0.4.2` remains the same 0.4 API line and satisfies `secret-service 5.2.0`'s `getrandom = "0.4"` dependency.

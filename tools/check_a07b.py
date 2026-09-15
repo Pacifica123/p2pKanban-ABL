@@ -62,9 +62,9 @@ status = read("docs/IMPLEMENTATION_STATUS.md")
 line = next((line for line in status.splitlines() if "A07b UTS compile/build correction" in line), "")
 if "implemented" not in line.lower() or "A08" not in line:
     fail("implementation ledger did not record A07b and preserve A08 as next stage")
-sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A07b" not in sequence or "A08" not in sequence:
-    fail("next-patch sequence is not synchronized with A07b correction")
+# A07b history is permanent in status/evidence; current NEXT_PATCH_SEQUENCE must be free to advance.
+if "| A08 " not in status:
+    fail("implementation ledger lost the A08 architecture stage following A07b")
 evidence = read("docs/evidence/A07B_UTS_BUILD_FIX.md")
 for token in ("TS2367", "invalid format string", "frontendDist", "A08"):
     if token not in evidence:
