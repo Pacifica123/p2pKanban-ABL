@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A14",
-  "description": "Canonical UserTestSpace verification through A14. A14 adds an explicit off-by-default bounded LAN compatibility bridge for device-link/portable provisioning: selected private/link-local IPv4 only, random high port, short TTL, one-time XChaCha20-Poly1305 capability, fresh native device identity, durable-vault requirement, one allowlisted POST endpoint and auto-close. Normal operation remains listener-free; no firewall/mDNS/systemd/WebView-network privilege is added. Cargo lock/cache/offline equivalence policy remains unchanged.",
+  "stage": "A15",
+  "description": "Canonical UserTestSpace verification through A15. A15 adds pacman-owned Arch x86_64 packaging/release inputs: deterministic source archive binding the canonical Cargo.lock, exact-checksum PKGBUILD staging, package-owned desktop/deep-link registration, non-root makepkg/namcap/desktop validation and external-key signed-repository tooling. Application runtime/schema/protocol behavior is unchanged; no self-updater, sudo/pacman invocation, install/remove data hook, system service or private signing material is introduced.",
   "deterministic": [
     {
       "id": "a00",
@@ -193,6 +193,14 @@
         "python3",
         "-B",
         "tools/check_a14.py"
+      ]
+    },
+    {
+      "id": "a15",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a15.py"
       ]
     }
   ],
@@ -428,12 +436,22 @@
           "-B",
           "tools/a14_host_lan_bridge_probe.py"
         ]
+      },
+      {
+        "id": "a15-package-prep",
+        "command": [
+          "python3",
+          "-B",
+          "tools/a15_host_packaging_probe.py",
+          "--report",
+          "{report_dir}/a15-packaging.json"
+        ]
       }
     ]
   },
   "manualEvidence": [
     "In the native window confirm: mode: desktop",
-    "In the native window confirm: p2pkanban-arch-native 0.1.0 \u00b7 ok \u00b7 desktop",
+    "In the native window confirm: p2pkanban-arch-native 0.1.0 · ok · desktop",
     "If hostile-navigation behavior changes later, capture a dedicated runtime test before claiming it verified",
     "With a visible primary window, optionally confirm that starting a second instance raises/focuses the existing window rather than opening another window",
     "A07 UI: create a workspace and board, close the native app, reopen it, then confirm the same workspace/board can be selected again",
@@ -456,11 +474,17 @@
     "A13 KDE Plasma Wayland: confirm sessionType=wayland and record Notifications/StatusNotifier/portal capability states; missing services must not break planner use.",
     "A13 GNOME Wayland: confirm no visible tray host is treated as supported degraded mode and normal window close exits the process.",
     "A13 X11: confirm sessionType=x11, second-instance p2pkanban://activate focus routing works, and no systemd user service/linger is enabled.",
-    "A13 packaging non-claim: custom x-scheme-handler registration is not installed until the A15 package stage; current deep-link evidence is direct argv + single-instance routing.",
     "A14 UI: with a durable vault, confirm the LAN bridge is stopped by default; explicitly start it on a detected private/link-local IPv4 address, record the random high-port endpoint/TTL indicator, then stop it and confirm the listener disappears.",
     "A14 security: confirm starting the bridge is disabled/refused when vault durable=false; the UI shows only fresh device public key + one-time capability and never a device private key/board key.",
     "A14 socket evidence: in normal app mode `ss -ltnp` must show no p2pKanban TCP listener; while explicitly active it must show only the selected LAN IPv4/random high port and disappear after stop/TTL/one authenticated request.",
     "A14 cross-client compatibility remains manual evidence: pair from one representative legacy LAN client using the versioned bridge wrapper and confirm the resulting profile reopens with A11 device-link state after the bridge has closed.",
-    "A14 must not add or mutate nftables/iptables/firewalld/ufw, mDNS/Avahi or systemd user services."
+    "A14 must not add or mutate nftables/iptables/firewalld/ufw, mDNS/Avahi or systemd user services.",
+    "A15 clean-chroot: on a fully updated Arch x86_64 build host, build the staged resolved PKGBUILD with devtools/makechrootpkg (or current pkgctl clean-build flow), run check(), and retain the build log/package SHA-256.",
+    "A15 package lint/ownership: run namcap on the built pkg.tar.zst and confirm its file list contains only /usr/bin/p2pkanban plus the package-owned desktop/icon/license files; no /home, XDG profile, keyring, systemd unit or mutable DB is packaged.",
+    "A15 install/upgrade integrity: install from a trusted signed repository on a coherent fully updated system, run pacman -Qkk p2pkanban, launch under Wayland and X11 as applicable, and verify p2pkanban://activate routes through the A13 handler.",
+    "A15 uninstall preservation: after creating representative profile/config/state/cache data and durable SecretVault entries, pacman -R p2pkanban must remove package-owned /usr files without deleting those user-owned XDG/keyring records.",
+    "A15 signing/repository: use a project release key held outside the repository; verify package and repository DB signatures, retain release-manifest.json/key fingerprint, and publish only to project-controlled HTTPS mirrors after replacing example.invalid origins.",
+    "A15 licensing: public AUR/public-mirror publication remains blocked until the rights holder replaces the packaging notice with an approved software license.",
+    "A15 rollback: package downgrade alone is not claimed as profile/database rollback; A16 owns backup/doctor/safe-mode recovery and schema-aware rollback evidence."
   ]
 }

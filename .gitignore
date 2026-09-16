@@ -39,3 +39,14 @@ __pycache__/
 
 # UserTestSpace verification output
 /.uts-reports/
+
+# Arch packaging/release outputs (A15)
+/packaging/arch/*.pkg.tar.zst
+/packaging/arch/*.pkg.tar.zst.sig
+/packaging/arch/p2pkanban-*.tar.gz
+/packaging/arch/*.db
+/packaging/arch/*.db.*
+/packaging/arch/*.files
+/packaging/arch/*.files.*
+/packaging/arch/.SRCINFO
+/release-stage/

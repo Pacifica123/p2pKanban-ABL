@@ -28,9 +28,9 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | ADR-006 foreground lifecycle; systemd-user optional only | A13 capability/lifecycle enforcement | **implemented in foreground/degraded-mode boundary; optional background service still deferred** | A14+ |
 | A13 Wayland/X11 + notifications/deep links/tray capability detection | `domain/application/integration`, Linux D-Bus detector, A06 deep-link routing, typed IPC/UI, host probe | **implemented; user-reported canonical UTS green** | A14 |
 | ADR-005 IPC and optional bounded LAN bridge | typed IPC + A14 bounded native LAN adapter | **implemented through A14; bridge remains explicit/off-by-default** | A15 |
-| A14 optional LAN compatibility bridge, off by default | `domain/application/lan_bridge`, Linux bounded HTTP adapter, typed IPC/UI, golden vector + host probe | **implemented at source/deterministic level; canonical UTS pending** | A15 |
-| ADR-003 pacman-owned packaging/update; AppImage fallback | architecture only | **planned** | A15 |
-| A15 PKGBUILD + signed-repo packaging | none yet | **planned** | A15 |
+| A14 optional LAN compatibility bridge, off by default | `domain/application/lan_bridge`, Linux bounded HTTP adapter, typed IPC/UI, golden vector + host probe | **implemented; user-reported canonical UTS green** | A15 |
+| ADR-003 pacman-owned packaging/update; AppImage fallback | `packaging/arch/**`, A15 release/source/signing tooling | **accepted and implemented through pacman-owned A15 boundary; host/release acceptance pending** | A15 |
+| A15 PKGBUILD + signed-repo packaging | `packaging/arch/**`, deterministic release source, signed-repo staging, package host probe, `tools/check_a15.py` | **implemented at source/deterministic level; canonical packaging UTS + clean-chroot/release evidence pending** | A16 |
 | A16 backup/doctor/safe-mode/recovery | none yet | **planned** | A16 |
 | A17 AppImage fallback + offline release kit | none yet | **planned** | A17 |
 | A18 performance/power/rolling-release hardening | no measurements yet | **experiment-needed** | A18 |

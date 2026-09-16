@@ -20,7 +20,7 @@ A11 implemented/acceptance target:
 - provide deterministic malformed/replay/downgrade/rollback tests against A00 device-link and portable-bundle fixtures;
 - keep browser/Docker node-link assumptions outside the native runtime.
 
-A11, A12 and A13 canonical UTS are green. The current architecture patch is **A14 — optional bounded LAN compatibility bridge, off by default**. After A14 canonical UTS is green, proceed to **A15 — PKGBUILD + signed repository packaging**.
+A11 through A14 canonical UTS are green. The current architecture patch is **A15 — PKGBUILD + signed repository packaging**. After A15 canonical packaging/release acceptance is green, proceed to **A16 — backup/doctor/safe-mode/recovery**.
 
 
 ## A11 implemented boundary
@@ -39,9 +39,18 @@ A12 promotes labels/card-label edges, comments, activity provenance and board ap
 
 A13 detects Wayland/X11 plus session D-Bus notification/StatusNotifier/portal capabilities, keeps tray/systemd background lifecycle disabled, and extends the A06 private activation socket with a validated bounded `deep-link-v1` message while preserving `activate-main-v1`. The WebView receives only typed capability/intents; no generic D-Bus/shell/filesystem privilege is exposed. Package-level custom-scheme registration is deferred to A15 and missing desktop services remain supported degraded mode.
 
-A13 canonical Cargo/runtime UTS is green. A14 is now the current implementation stage. After canonical A14 Cargo/runtime/host-probe UTS is green, the exact next architecture patch is **A15 — PKGBUILD + signed repository packaging**.
+A13 and A14 canonical Cargo/runtime UTS are green. A15 is now the current implementation stage. After canonical A15 package preparation plus release acceptance is green, the exact next architecture patch is **A16 — backup/doctor/safe-mode/recovery**.
 
 
 ## A14 implemented boundary
 
 A14 adds one explicit, short-lived LAN compatibility listener for device-link/portable provisioning. It binds only a user-selected detected private/link-local IPv4 address on a random high port, uses a 256-bit one-time XChaCha20-Poly1305 capability, allows one POST endpoint, closes after one authenticated request or TTL, and requires durable SecretVault storage. Fresh native device identity is generated locally; only its public key leaves the process. No generic planner REST API, mDNS, firewall change, background service or WebView network privilege is added.
+
+
+## A15 implemented boundary
+
+A15 introduces a pacman-owned Arch x86_64 packaging/release boundary without changing the application runtime, schema or protocol surface. A deterministic release-preparation tool binds the canonical UTS Cargo.lock into the retained source archive, resolves an exact PKGBUILD source checksum, and records lock/npm/migration/protocol digests. The package owns only `/usr/bin` plus desktop/icon/license metadata; no install/remove hook touches XDG data, keyrings, services or package-manager configuration.
+
+Package-level `x-scheme-handler/p2pkanban` registration now routes `%u` to the A13 validated argv/single-instance path. Repository staging signs package and pacman DB through an external GPG fingerprint/agent and retains hashes/fingerprint metadata; no private signing material enters the repository. Public AUR/mirror publication remains blocked until the owner supplies a software license. Clean-chroot/package namcap/pacman-Qkk/uninstall and real-key publication remain explicit A15 release evidence.
+
+After A15 acceptance, the next stage is **A16 — backup/doctor/safe-mode/recovery**.

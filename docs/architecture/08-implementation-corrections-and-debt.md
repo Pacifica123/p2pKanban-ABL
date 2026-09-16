@@ -217,3 +217,17 @@ Rust tests and the real-binary host probe prove the transport/auth/TTL/one-shot 
 ### DEBT-A14-003 — no automatic LAN discovery/firewall policy
 
 A14 exposes detected private/link-local IPv4 addresses for explicit selection. It does not add mDNS, SSDP, UPnP, firewall rules or privilege escalation. Usability improvements must preserve that opt-in security boundary.
+
+## A15 pacman packaging/release notes
+
+### DEBT-A15-001 — Cargo.lock is release-owned, not yet repository-owned
+
+Canonical UTS has historically generated `src-tauri/Cargo.lock` inside its isolated project copy and the devctl post-snapshot does not carry that generated file back into the source repository. A15 therefore does not fabricate a lock or resolve dependencies inside `build()`. `tools/a15_prepare_release.py` requires the exact UTS-accepted lock, injects it into the deterministic retained source archive and records its SHA-256 in release metadata. A future correction may promote that exact host-proven lock into repository ownership; until then, arbitrary Git checkout rebuilds are not claimed byte-reproducible.
+
+### DEBT-A15-002 — public redistribution license is intentionally unresolved
+
+The project snapshot supplied to A15 contains no software license. A15 must not invent one. The package therefore carries an explicit project-controlled distribution notice and public AUR/public-mirror publication remains blocked until the rights holder chooses and supplies a license. Package/repository signatures authenticate artifacts but do not grant redistribution rights.
+
+### DEBT-A15-003 — clean-chroot/install/signing evidence changes host or uses release secrets
+
+The canonical UTS can non-root verify release-source binding, `makepkg --verifysource`, `namcap PKGBUILD`, desktop metadata and availability of Arch packaging/signing tools. A real clean chroot requires host package/build infrastructure; pacman install/remove changes package state; official repository signing requires the external release private key. These remain named manual/release evidence and are never emulated with a committed test private key or hidden sudo invocation.

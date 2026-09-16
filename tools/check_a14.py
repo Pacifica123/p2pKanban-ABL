@@ -206,8 +206,15 @@ for forbidden in ("sudo", "iptables", "nft ", "firewall-cmd", "ufw ", "systemctl
         fail("A14 host probe performs forbidden host mutation/bootstrap: " + forbidden)
 
 plan = load("tools/uts_plan.json")
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A14":
-    fail("UTS plan did not advance to A14")
+if plan.get("schemaVersion") != 1:
+    fail("UTS plan schema mismatch after A14")
+stage = str(plan.get("stage", ""))
+try:
+    stage_number = int(stage.removeprefix("A"))
+except ValueError:
+    fail("UTS plan stage is not an Axx stage")
+if stage_number < 14:
+    fail("UTS plan regressed before A14")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 if "a13" not in ids or "a14" not in ids or ids.index("a13") >= ids.index("a14"):
     fail("A14 deterministic gate missing/not ordered after A13")
@@ -220,11 +227,19 @@ if post.get("a14-host-lan-bridge") != ["python3", "-B", "tools/a14_host_lan_brid
     fail("A14 real-binary host probe missing")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "A14 optional LAN compatibility bridge, off by default" not in status or "canonical UTS pending" not in status:
-    fail("A14 implementation ledger missing/premature")
+if "A14 optional LAN compatibility bridge, off by default" not in status:
+    fail("A14 implementation ledger missing")
 sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A15" not in sequence or "PKGBUILD + signed repository packaging" not in sequence:
-    fail("next stage after A14 is not A15 packaging")
+if stage_number == 14:
+    if "canonical UTS pending" not in status:
+        fail("A14 implementation ledger prematurely claims acceptance")
+    if "A15" not in sequence or "PKGBUILD + signed repository packaging" not in sequence:
+        fail("next stage after A14 is not A15 packaging")
+else:
+    if "A14" not in status or "canonical UTS green" not in status:
+        fail("post-A14 status does not preserve A14 acceptance history")
+    if "A14" not in sequence or "canonical" not in sequence or "green" not in sequence:
+        fail("post-A14 sequence does not preserve A14 acceptance history")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
 for token in ("DEBT-A14-001", "DEBT-A14-002", "DEBT-A14-003"):
     if token not in debt:

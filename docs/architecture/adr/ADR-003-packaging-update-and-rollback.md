@@ -1,6 +1,6 @@
 # ADR-003 — Arch packaging, update and rollback
 
-**Status:** proposed  
+**Status:** accepted; A15 implementation in progress
 **Decision:** signed pacman package/repository + reviewable PKGBUILD is the primary distribution path. Pacman owns `/usr` and performs updates. AppImage is a signed fallback. Database rollback is coordinated separately from package downgrade.
 
 ## Grounds

@@ -209,15 +209,31 @@ if "connect-src 'none'" not in conf.get("app", {}).get("security", {}).get("csp"
 if "trayIcon" in json.dumps(conf):
     fail("A13 detects tray host capability but must not create tray lifecycle yet")
 
-# No package/service registration is smuggled into the source stage.
+# A13 itself must not smuggle package/service registration into the runtime source.
+# A15+ may add exactly the package-owned desktop association that routes into the
+# already validated A13 argv/deep-link path. A systemd service remains forbidden.
+plan = load("tools/uts_plan.json")
+if plan.get("schemaVersion") != 1:
+    fail("UTS plan schema mismatch after A13")
+stage = str(plan.get("stage", ""))
+try:
+    stage_number = int(stage.removeprefix("A"))
+except ValueError:
+    fail("UTS plan stage is not an Axx stage")
+if stage_number < 13:
+    fail("UTS plan regressed before A13")
+
 for path in ROOT.rglob("*"):
     if not path.is_file():
         continue
     rel = path.relative_to(ROOT).as_posix()
     if rel.startswith((".git/", "node_modules/", "dist/", "src-tauri/target/", ".uts-reports/")):
         continue
-    if path.suffix in {".service", ".desktop"}:
-        fail("A13 must not install package/systemd integration artifact yet: " + rel)
+    if path.suffix == ".service":
+        fail("A13 foreground lifecycle must not gain a systemd service: " + rel)
+    if path.suffix == ".desktop":
+        if stage_number < 15 or rel != "packaging/arch/p2pkanban.desktop":
+            fail("unexpected desktop integration artifact after A13: " + rel)
 
 probe = read("tools/a13_host_integration_probe.py")
 for token in [
@@ -243,16 +259,6 @@ for forbidden_exec in (
     if forbidden_exec in probe:
         fail("A13 host probe contains forbidden bootstrap/action: " + forbidden_exec)
 
-plan = load("tools/uts_plan.json")
-if plan.get("schemaVersion") != 1:
-    fail("UTS plan schema mismatch after A13")
-stage = str(plan.get("stage", ""))
-try:
-    stage_number = int(stage.removeprefix("A"))
-except ValueError:
-    fail("UTS plan stage is not an Axx stage")
-if stage_number < 13:
-    fail("UTS plan regressed before A13")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 if "a12" not in ids or "a13" not in ids or ids.index("a12") >= ids.index("a13"):
     fail("A13 deterministic gate missing/not ordered after A12")
@@ -272,7 +278,7 @@ if stage_number == 13:
     if "A14" not in sequence or "optional bounded LAN compatibility bridge" not in sequence:
         fail("next stage after A13 is not A14 LAN compatibility bridge")
 else:
-    if "A13 canonical Cargo/runtime UTS is green" not in sequence:
+    if "A13" not in sequence or "canonical Cargo/runtime UTS" not in sequence or "green" not in sequence:
         fail("post-A13 sequence does not preserve A13 acceptance history")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
 for token in ("DEBT-A13-001", "DEBT-A13-002", "DEBT-A13-003"):
