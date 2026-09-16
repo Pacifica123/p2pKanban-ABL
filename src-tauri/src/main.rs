@@ -4,9 +4,12 @@ mod domain;
 mod infrastructure;
 mod navigation_policy;
 
+use std::{io::Write as _, net::Ipv4Addr, sync::Arc, time::Duration};
+
 use application::{
     import::ImportService,
     integration::{IntegrationAdapter, IntegrationService},
+    lan_bridge::{LanBridgePayloadHandler, LanBridgeRuntime, LanBridgeService},
     parity::{ParityService, RandomParityIds},
     planner::{PlannerService, RandomPlannerIds},
     workspace::{RandomUuidGenerator, WorkspaceService},
@@ -15,6 +18,7 @@ use infrastructure::{
     linux::{
         instance::{self, InstanceRole, SecondaryInstance, ACTIVATE_MAIN_V1, MAX_ACTIVATION_PAYLOAD_BYTES},
         integration::LinuxIntegrationAdapter,
+        lan_bridge::LinuxLanBridgeRuntime,
         secrets::bootstrap_vault,
         xdg::{DesktopPaths, XdgEnvironment},
     },
@@ -23,8 +27,9 @@ use infrastructure::{
         repository::SqlitePlannerRepository, workspace::SqliteWorkspaceCatalog,
     },
 };
-use crate::domain::integration::{
-    decode_deep_link_activation, encode_deep_link_activation, parse_deep_link, DeepLinkIntent,
+use crate::domain::{
+    integration::{decode_deep_link_activation, encode_deep_link_activation, parse_deep_link, DeepLinkIntent},
+    lan_bridge::{seal_lan_bridge_payload, LanBridgeLifecycle, LanBridgeStartRequest, LAN_BRIDGE_NONCE_BYTES, LAN_BRIDGE_TOKEN_BYTES},
 };
 use tauri::{
     webview::{NewWindowResponse, WebviewWindowBuilder},
@@ -56,6 +61,63 @@ fn integration_probe_requested() -> bool {
     std::env::args().skip(1).any(|argument| argument == "--integration-capabilities-json")
 }
 
+
+fn lan_bridge_host_probe_requested() -> bool {
+    std::env::args().skip(1).any(|argument| argument == "--lan-bridge-host-probe")
+}
+
+fn run_lan_bridge_host_probe() -> Result<(), String> {
+    if std::env::var("P2PKANBAN_UTS_LAN_BRIDGE_PROBE").ok().as_deref() != Some("1") {
+        return Err("LAN bridge host probe is reserved for UserTestSpace verification".to_owned());
+    }
+    let runtime = LinuxLanBridgeRuntime::host_probe();
+    let request = LanBridgeStartRequest::validated(&Ipv4Addr::LOCALHOST.to_string(), 30)
+        .map_err(|error| format!("invalid host-probe request: {error:?}"))?;
+    let mut token = [0_u8; LAN_BRIDGE_TOKEN_BYTES];
+    let mut nonce = [0_u8; LAN_BRIDGE_NONCE_BYTES];
+    getrandom::fill(&mut token).map_err(|_| "host-probe randomness unavailable".to_owned())?;
+    getrandom::fill(&mut nonce).map_err(|_| "host-probe randomness unavailable".to_owned())?;
+    let payload = br#"{"kind":"a14-host-probe"}"#;
+    let envelope = seal_lan_bridge_payload(payload, &token, &nonce)
+        .map_err(|error| format!("unable to seal host-probe payload: {error:?}"))?;
+    let handler: LanBridgePayloadHandler = Arc::new(|plaintext| {
+        if plaintext == br#"{"kind":"a14-host-probe"}"# {
+            Ok(r#"{"status":"accepted","probe":"a14"}"#.to_owned())
+        } else {
+            Err("unexpected-host-probe-payload".to_owned())
+        }
+    });
+    let handle = runtime
+        .start(request, token, handler)
+        .map_err(|error| format!("unable to start host-probe bridge: {error:?}"))?;
+    let initial = handle.status();
+    let endpoint = initial.endpoint.clone().ok_or_else(|| "host-probe endpoint missing".to_owned())?;
+    println!(
+        "{}",
+        serde_json::json!({
+            "protocol": "p2p-kanban-lan-bridge/1",
+            "endpoint": endpoint,
+            "envelope": String::from_utf8(envelope).map_err(|_| "host-probe envelope was not UTF-8 JSON".to_owned())?,
+            "expiresAtUnix": initial.expires_at_unix,
+        })
+    );
+    std::io::stdout().flush().map_err(|error| format!("unable to flush host-probe descriptor: {error}"))?;
+
+    for _ in 0..200 {
+        std::thread::sleep(Duration::from_millis(50));
+        let status = handle.status();
+        match status.lifecycle {
+            LanBridgeLifecycle::Completed => return Ok(()),
+            LanBridgeLifecycle::Failed | LanBridgeLifecycle::Expired | LanBridgeLifecycle::Stopped => {
+                return Err(format!("host-probe bridge terminated before acceptance: {:?} {:?}", status.lifecycle, status.last_result));
+            }
+            LanBridgeLifecycle::Listening => {}
+        }
+    }
+    let _ = handle.stop();
+    Err("host-probe bridge was not consumed within 10 seconds".to_owned())
+}
+
 fn print_integration_probe(prepared: &infrastructure::linux::xdg::PreparedDesktopPaths) {
     let adapter = LinuxIntegrationAdapter::new(prepared.activation_socket().is_some());
     let capabilities = adapter.detect();
@@ -85,6 +147,9 @@ fn run() -> Result<(), String> {
     if integration_probe_requested() {
         print_integration_probe(&prepared);
         return Ok(());
+    }
+    if lan_bridge_host_probe_requested() {
+        return run_lan_bridge_host_probe();
     }
 
     let mut primary = match instance::acquire(&prepared)
@@ -123,10 +188,10 @@ fn run() -> Result<(), String> {
         Box::new(planner_repository),
         Box::new(RandomPlannerIds),
     );
-    let vault_service = bootstrap_vault(&prepared.paths.profile, "default");
+    let vault_service = Arc::new(bootstrap_vault(&prepared.paths.profile, "default"));
     let import_repository = SqliteImportRepository::open(&prepared.paths.profile)
         .map_err(|err| format!("unable to open durable import repository: {err:?}"))?;
-    let import_service = ImportService::new(Box::new(import_repository));
+    let import_service = Arc::new(ImportService::new(Box::new(import_repository)));
     let parity_repository = SqliteParityRepository::open(&prepared.paths.profile)
         .map_err(|err| format!("unable to open durable parity repository: {err:?}"))?;
     let parity_service = ParityService::new(
@@ -136,6 +201,11 @@ fn run() -> Result<(), String> {
     let integration_service = IntegrationService::new(Box::new(LinuxIntegrationAdapter::new(
         prepared.activation_socket().is_some(),
     )));
+    let lan_bridge_service = LanBridgeService::new(
+        Box::new(LinuxLanBridgeRuntime::production()),
+        Arc::clone(&import_service),
+        Arc::clone(&vault_service),
+    );
     if let Some(intent) = startup_deep_link {
         integration_service.enqueue_deep_link(intent);
     }
@@ -153,6 +223,7 @@ fn run() -> Result<(), String> {
         .manage(import_service)
         .manage(parity_service)
         .manage(integration_service)
+        .manage(lan_bridge_service)
         .invoke_handler(tauri::generate_handler![
             desktop_api::desktop_api_health,
             desktop_api::desktop_api_profile_diagnostics,
@@ -191,7 +262,11 @@ fn run() -> Result<(), String> {
             desktop_api::desktop_api_list_activity,
             desktop_api::desktop_api_unsynced_parity_count,
             desktop_api::desktop_api_integration_capabilities,
-            desktop_api::desktop_api_take_deep_link_intents
+            desktop_api::desktop_api_take_deep_link_intents,
+            desktop_api::desktop_api_lan_bridge_addresses,
+            desktop_api::desktop_api_lan_bridge_status,
+            desktop_api::desktop_api_start_lan_bridge,
+            desktop_api::desktop_api_stop_lan_bridge
         ])
         .setup(move |app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))

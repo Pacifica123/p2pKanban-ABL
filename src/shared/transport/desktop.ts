@@ -13,6 +13,8 @@ import type {
   DeepLinkIntentSummary,
   IntegrationCapabilities,
   LabelSummary,
+  LanBridgeStartResult,
+  LanBridgeStatus,
   ParityUnsyncedCount,
   PendingChangeCount,
   ProfileDiagnostics,
@@ -27,6 +29,10 @@ const DESKTOP_PROFILE_DIAGNOSTICS_COMMAND = 'desktop_api_profile_diagnostics' as
 const DESKTOP_VAULT_STATUS_COMMAND = 'desktop_api_vault_status' as const;
 const DESKTOP_INTEGRATION_CAPABILITIES_COMMAND = 'desktop_api_integration_capabilities' as const;
 const DESKTOP_TAKE_DEEP_LINK_INTENTS_COMMAND = 'desktop_api_take_deep_link_intents' as const;
+const DESKTOP_LAN_BRIDGE_ADDRESSES_COMMAND = 'desktop_api_lan_bridge_addresses' as const;
+const DESKTOP_LAN_BRIDGE_STATUS_COMMAND = 'desktop_api_lan_bridge_status' as const;
+const DESKTOP_START_LAN_BRIDGE_COMMAND = 'desktop_api_start_lan_bridge' as const;
+const DESKTOP_STOP_LAN_BRIDGE_COMMAND = 'desktop_api_stop_lan_bridge' as const;
 const DESKTOP_LIST_WORKSPACES_COMMAND = 'desktop_api_list_workspaces' as const;
 const DESKTOP_CREATE_WORKSPACE_COMMAND = 'desktop_api_create_workspace' as const;
 const DESKTOP_LIST_BOARDS_COMMAND = 'desktop_api_list_boards' as const;
@@ -109,6 +115,19 @@ export const desktopTransport: ApiTransport = {
     }
     if (method === 'POST' && path === '/system/deep-link-intents/take') {
       return (await invoke<DeepLinkIntentSummary[]>(DESKTOP_TAKE_DEEP_LINK_INTENTS_COMMAND)) as T;
+    }
+    if (method === 'GET' && path === '/system/lan-bridge/addresses') {
+      return (await invoke<string[]>(DESKTOP_LAN_BRIDGE_ADDRESSES_COMMAND)) as T;
+    }
+    if (method === 'GET' && path === '/system/lan-bridge/status') {
+      return (await invoke<LanBridgeStatus>(DESKTOP_LAN_BRIDGE_STATUS_COMMAND)) as T;
+    }
+    if (method === 'POST' && path === '/system/lan-bridge/start') {
+      const body = jsonBody<{ bindAddress: string; ttlSeconds: number }>(init);
+      return (await invoke<LanBridgeStartResult>(DESKTOP_START_LAN_BRIDGE_COMMAND, body)) as T;
+    }
+    if (method === 'POST' && path === '/system/lan-bridge/stop') {
+      return (await invoke<LanBridgeStatus>(DESKTOP_STOP_LAN_BRIDGE_COMMAND)) as T;
     }
     if (method === 'GET' && path === '/planner/workspaces') {
       return (await invoke<WorkspaceSummary[]>(DESKTOP_LIST_WORKSPACES_COMMAND)) as T;

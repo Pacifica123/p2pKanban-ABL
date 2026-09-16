@@ -26,9 +26,9 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | A11 device-link/2 + web-node-link/bundle migration | schema v5 + `domain/application/import` + SQLite import + SecretVault provisioning + canonical UTS | **implemented; canonical Cargo/offline/runtime UTS green after CORR-A11-001/002/003** | A12 |
 | A12 labels/comments/activity/appearance parity | schema v6, `domain/application/parity`, SQLite parity/import/sync adapters, typed IPC/UI, `tools/check_a12.py` | **implemented; CORR-A12-001 applied; canonical UTS green** | A13 |
 | ADR-006 foreground lifecycle; systemd-user optional only | A13 capability/lifecycle enforcement | **implemented in foreground/degraded-mode boundary; optional background service still deferred** | A14+ |
-| A13 Wayland/X11 + notifications/deep links/tray capability detection | `domain/application/integration`, Linux D-Bus detector, A06 deep-link routing, typed IPC/UI, host probe | **implemented at source/deterministic level; canonical UTS pending** | A14 |
-| ADR-005 IPC and optional bounded LAN bridge | IPC side begins A02; LAN bridge not implemented | **planned** | A14 |
-| A14 optional LAN compatibility bridge, off by default | none yet | **planned** | A14 |
+| A13 Wayland/X11 + notifications/deep links/tray capability detection | `domain/application/integration`, Linux D-Bus detector, A06 deep-link routing, typed IPC/UI, host probe | **implemented; user-reported canonical UTS green** | A14 |
+| ADR-005 IPC and optional bounded LAN bridge | typed IPC + A14 bounded native LAN adapter | **implemented through A14; bridge remains explicit/off-by-default** | A15 |
+| A14 optional LAN compatibility bridge, off by default | `domain/application/lan_bridge`, Linux bounded HTTP adapter, typed IPC/UI, golden vector + host probe | **implemented at source/deterministic level; canonical UTS pending** | A15 |
 | ADR-003 pacman-owned packaging/update; AppImage fallback | architecture only | **planned** | A15 |
 | A15 PKGBUILD + signed-repo packaging | none yet | **planned** | A15 |
 | A16 backup/doctor/safe-mode/recovery | none yet | **planned** | A16 |

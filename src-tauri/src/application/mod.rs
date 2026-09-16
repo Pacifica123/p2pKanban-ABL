@@ -48,3 +48,5 @@ mod tests {
         assert_eq!(health.version, env!("CARGO_PKG_VERSION"));
     }
 }
+
+pub mod lan_bridge;

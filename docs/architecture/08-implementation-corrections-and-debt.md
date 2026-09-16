@@ -203,3 +203,17 @@ The native process validates and routes `p2pkanban://` arguments, but A13 does n
 ### DEBT-A13-003 — deep-link navigation is an intent, not hidden repository traversal
 
 A13 queues validated workspace/board/card identifiers and surfaces them through typed IPC. It does not invent cross-repository lookup/navigation semantics merely to auto-open an entity. Application-level navigation resolution can be added only when an explicit lookup contract exists.
+
+## A14 bounded LAN compatibility notes
+
+### DEBT-A14-001 — compatibility wrapper is intentionally removable
+
+A14 exists only for the legacy LAN enrollment/migration gap. It must not become a second permanent application API. Once all supported clients can complete native device-link provisioning without this wrapper, removal is preferred over endpoint growth.
+
+### DEBT-A14-002 — physical legacy-client interoperability remains multi-client evidence
+
+Rust tests and the real-binary host probe prove the transport/auth/TTL/one-shot boundary and A11 destination wiring. They do not claim that every historical Android/web build already emits `p2p-kanban-lan-bridge/1`; representative physical-client pairing remains explicit compatibility evidence.
+
+### DEBT-A14-003 — no automatic LAN discovery/firewall policy
+
+A14 exposes detected private/link-local IPv4 addresses for explicit selection. It does not add mDNS, SSDP, UPnP, firewall rules or privilege escalation. Usability improvements must preserve that opt-in security boundary.

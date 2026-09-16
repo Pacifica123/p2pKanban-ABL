@@ -1,10 +1,11 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use tauri::State;
 
 use crate::{
     application::{
         integration::IntegrationService,
+        lan_bridge::{LanBridgeService, LanBridgeServiceError, LanBridgeStartView},
         parity::{ActivityView, AppearanceView, CommentView, LabelView, ParityService, ParityServiceError},
         planner::{
             CardView, ChecklistItemView, ChecklistView, ColumnView, PlannerService, PlannerServiceError,
@@ -14,7 +15,10 @@ use crate::{
         workspace::{BoardView, WorkspaceService, WorkspaceServiceError, WorkspaceView},
         ApplicationServices,
     },
-    domain::integration::{DeepLinkIntent, IntegrationCapabilities},
+    domain::{
+        integration::{DeepLinkIntent, IntegrationCapabilities},
+        lan_bridge::LanBridgeStatus,
+    },
     infrastructure::linux::xdg::ProfileDiagnostics,
 };
 
@@ -61,6 +65,40 @@ fn deep_link_intent_to_wire(intent: DeepLinkIntent) -> BTreeMap<&'static str, St
         ("entityId", intent.target.entity_id().unwrap_or_default()),
         ("canonical", intent.canonical),
     ])
+}
+
+fn lan_bridge_status_to_wire(status: LanBridgeStatus) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("lifecycle", status.lifecycle.as_str().to_owned()),
+        ("bindAddress", status.bind_address.unwrap_or_default()),
+        ("endpoint", status.endpoint.unwrap_or_default()),
+        ("expiresAtUnix", status.expires_at_unix.map(|value| value.to_string()).unwrap_or_default()),
+        ("attempts", status.attempts.to_string()),
+        ("lastResult", status.last_result.unwrap_or_default()),
+    ])
+}
+
+fn lan_bridge_start_to_wire(view: LanBridgeStartView) -> BTreeMap<&'static str, String> {
+    let mut payload = lan_bridge_status_to_wire(view.status);
+    payload.insert("capability", view.capability);
+    payload.insert("devicePublicKey", view.device_public_key);
+    payload
+}
+
+fn lan_bridge_error_code(error: LanBridgeServiceError) -> String {
+    use crate::application::lan_bridge::{LanBridgeRuntimeError, LanBridgeServiceError::*};
+    match error {
+        InvalidRequest(_) => "LAN_BRIDGE_INVALID_REQUEST",
+        AlreadyRunning => "LAN_BRIDGE_ALREADY_RUNNING",
+        Runtime(LanBridgeRuntimeError::BindUnavailable) => "LAN_BRIDGE_BIND_UNAVAILABLE",
+        Runtime(LanBridgeRuntimeError::UnsupportedAddress) => "LAN_BRIDGE_UNSUPPORTED_ADDRESS",
+        Runtime(_) => "LAN_BRIDGE_RUNTIME_FAILURE",
+        Randomness => "LAN_BRIDGE_RANDOMNESS_UNAVAILABLE",
+        VaultNotDurable => "LAN_BRIDGE_DURABLE_VAULT_REQUIRED",
+        InvalidPackage => "LAN_BRIDGE_INVALID_PACKAGE",
+        ImportFailed => "LAN_BRIDGE_IMPORT_FAILED",
+        Poisoned => "LAN_BRIDGE_UNAVAILABLE",
+    }.to_owned()
 }
 
 fn workspace_to_wire(view: WorkspaceView) -> BTreeMap<&'static str, String> {
@@ -265,7 +303,7 @@ pub fn desktop_api_profile_diagnostics(
 
 #[tauri::command]
 pub fn desktop_api_vault_status(
-    vault: State<'_, VaultService>,
+    vault: State<'_, Arc<VaultService>>,
 ) -> BTreeMap<&'static str, String> {
     vault_status_to_wire(vault.status())
 }
@@ -633,19 +671,55 @@ pub fn desktop_api_take_deep_link_intents(
         .collect()
 }
 
+
+#[tauri::command]
+pub fn desktop_api_lan_bridge_addresses(
+    bridge: State<'_, LanBridgeService>,
+) -> Vec<String> {
+    bridge.available_bind_addresses()
+}
+
+#[tauri::command]
+pub fn desktop_api_lan_bridge_status(
+    bridge: State<'_, LanBridgeService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    bridge.status().map(lan_bridge_status_to_wire).map_err(lan_bridge_error_code)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command]
+pub fn desktop_api_start_lan_bridge(
+    bridge: State<'_, LanBridgeService>,
+    bindAddress: String,
+    ttlSeconds: u64,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    bridge
+        .start(&bindAddress, ttlSeconds)
+        .map(lan_bridge_start_to_wire)
+        .map_err(lan_bridge_error_code)
+}
+
+#[tauri::command]
+pub fn desktop_api_stop_lan_bridge(
+    bridge: State<'_, LanBridgeService>,
+) -> Result<BTreeMap<&'static str, String>, String> {
+    bridge.stop().map(lan_bridge_status_to_wire).map_err(lan_bridge_error_code)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         deep_link_intent_to_wire, health_to_wire, integration_capabilities_to_wire,
-        profile_diagnostics_to_wire, vault_status_to_wire,
+        lan_bridge_status_to_wire, profile_diagnostics_to_wire, vault_status_to_wire,
     };
     use crate::{
         application::{
             system::HealthView,
             vault::{VaultState, VaultStatus},
         },
-        domain::integration::{
-            parse_deep_link, CapabilityState, IntegrationCapabilities, SessionKind,
+        domain::{
+            integration::{parse_deep_link, CapabilityState, IntegrationCapabilities, SessionKind},
+            lan_bridge::{LanBridgeLifecycle, LanBridgeStatus},
         },
         infrastructure::linux::xdg::ProfileDiagnostics,
     };
@@ -720,6 +794,23 @@ mod tests {
         );
         assert_eq!(intent.get("kind").map(String::as_str), Some("board"));
         assert_eq!(intent.get("entityId").map(String::as_str), Some("11111111-2222-4333-8444-555555555555"));
+    }
+
+
+    #[test]
+    fn a14_bridge_wire_exposes_lifecycle_metadata_without_secret_material() {
+        let payload = lan_bridge_status_to_wire(LanBridgeStatus {
+            lifecycle: LanBridgeLifecycle::Listening,
+            bind_address: Some("192.168.1.2:55000".into()),
+            endpoint: Some("http://192.168.1.2:55000/v1/p2pkanban/pair".into()),
+            expires_at_unix: Some(2_000_000_000),
+            attempts: 2,
+            last_result: None,
+        });
+        assert_eq!(payload.get("lifecycle").map(String::as_str), Some("listening"));
+        assert_eq!(payload.get("attempts").map(String::as_str), Some("2"));
+        assert!(!payload.contains_key("capability"));
+        assert_eq!(payload.len(), 6);
     }
 
 }

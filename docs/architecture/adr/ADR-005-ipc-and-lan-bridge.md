@@ -1,6 +1,6 @@
 # ADR-005 — Arch IPC and optional LAN compatibility bridge
 
-**Status:** proposed  
+**Status:** accepted; implemented through A14
 **Decision:** typed Tauri IPC is the normal UI/core boundary. No localhost HTTP API is opened by default. A narrowly scoped authenticated LAN bridge may exist only as an explicit short-lived migration/pairing compatibility feature.
 
 ## Grounds

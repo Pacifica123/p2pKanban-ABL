@@ -20,7 +20,7 @@ A11 implemented/acceptance target:
 - provide deterministic malformed/replay/downgrade/rollback tests against A00 device-link and portable-bundle fixtures;
 - keep browser/Docker node-link assumptions outside the native runtime.
 
-A11 and A12 canonical UTS are green. The current architecture patch is **A13 — lifecycle/integration capability detection**. After A13 canonical UTS is green, proceed to **A14 — optional bounded LAN compatibility bridge**.
+A11, A12 and A13 canonical UTS are green. The current architecture patch is **A14 — optional bounded LAN compatibility bridge, off by default**. After A14 canonical UTS is green, proceed to **A15 — PKGBUILD + signed repository packaging**.
 
 
 ## A11 implemented boundary
@@ -39,4 +39,9 @@ A12 promotes labels/card-label edges, comments, activity provenance and board ap
 
 A13 detects Wayland/X11 plus session D-Bus notification/StatusNotifier/portal capabilities, keeps tray/systemd background lifecycle disabled, and extends the A06 private activation socket with a validated bounded `deep-link-v1` message while preserving `activate-main-v1`. The WebView receives only typed capability/intents; no generic D-Bus/shell/filesystem privilege is exposed. Package-level custom-scheme registration is deferred to A15 and missing desktop services remain supported degraded mode.
 
-After canonical A13 Cargo/runtime UTS is green, the exact next architecture patch is **A14 — optional bounded LAN compatibility bridge, off by default**.
+A13 canonical Cargo/runtime UTS is green. A14 is now the current implementation stage. After canonical A14 Cargo/runtime/host-probe UTS is green, the exact next architecture patch is **A15 — PKGBUILD + signed repository packaging**.
+
+
+## A14 implemented boundary
+
+A14 adds one explicit, short-lived LAN compatibility listener for device-link/portable provisioning. It binds only a user-selected detected private/link-local IPv4 address on a random high port, uses a 256-bit one-time XChaCha20-Poly1305 capability, allows one POST endpoint, closes after one authenticated request or TTL, and requires durable SecretVault storage. Fresh native device identity is generated locally; only its public key leaves the process. No generic planner REST API, mDNS, firewall change, background service or WebView network privilege is added.

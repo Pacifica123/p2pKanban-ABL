@@ -190,7 +190,7 @@ for token in ("IntegrationCapabilities", "DeepLinkIntentSummary"):
     if token not in types:
         fail("A13 frontend DTO missing " + token)
 for token in (
-    "A13 DESKTOP INTEGRATION",
+    "A13 lifecycle/integration",
     "Desktop integration capabilities",
     "Validated deep-link intents",
     "tray lifecycle:",
@@ -244,8 +244,15 @@ for forbidden_exec in (
         fail("A13 host probe contains forbidden bootstrap/action: " + forbidden_exec)
 
 plan = load("tools/uts_plan.json")
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A13":
-    fail("UTS plan did not advance to A13")
+if plan.get("schemaVersion") != 1:
+    fail("UTS plan schema mismatch after A13")
+stage = str(plan.get("stage", ""))
+try:
+    stage_number = int(stage.removeprefix("A"))
+except ValueError:
+    fail("UTS plan stage is not an Axx stage")
+if stage_number < 13:
+    fail("UTS plan regressed before A13")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 if "a12" not in ids or "a13" not in ids or ids.index("a12") >= ids.index("a13"):
     fail("A13 deterministic gate missing/not ordered after A12")
@@ -258,11 +265,15 @@ if post.get("a13-desktop-integration") != ["python3", "-B", "tools/a13_host_inte
     fail("A13 real-binary integration probe missing")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "A13 Wayland/X11 + notifications/deep links/tray capability detection" not in status or "canonical UTS pending" not in status:
-    fail("A13 implementation status missing or premature")
+if "A13 Wayland/X11 + notifications/deep links/tray capability detection" not in status:
+    fail("A13 implementation status missing")
 sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A14" not in sequence or "optional bounded LAN compatibility bridge" not in sequence:
-    fail("next stage after A13 is not A14 LAN compatibility bridge")
+if stage_number == 13:
+    if "A14" not in sequence or "optional bounded LAN compatibility bridge" not in sequence:
+        fail("next stage after A13 is not A14 LAN compatibility bridge")
+else:
+    if "A13 canonical Cargo/runtime UTS is green" not in sequence:
+        fail("post-A13 sequence does not preserve A13 acceptance history")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
 for token in ("DEBT-A13-001", "DEBT-A13-002", "DEBT-A13-003"):
     if token not in debt:
@@ -275,6 +286,20 @@ if evidence.get("formatVersion") != 1 or evidence.get("stage") != "A13":
 for key in ("facts", "inferences", "proposals", "unresolved", "externalReferences", "sources"):
     if not evidence.get(key):
         fail("A13 evidence missing " + key)
+evolving_after_a13 = {
+    "src-tauri/Cargo.toml",
+    "src-tauri/src/main.rs",
+    "src-tauri/src/desktop_api.rs",
+    "src/shared/api/types.ts",
+    "src/shared/transport/desktop.ts",
+    "src/App.tsx",
+    "src/styles.css",
+    "tools/check_a13.py",
+    "tools/uts_plan.json",
+    "docs/architecture/08-implementation-corrections-and-debt.md",
+    "docs/IMPLEMENTATION_STATUS.md",
+    "docs/NEXT_PATCH_SEQUENCE.md",
+}
 for item in evidence.get("sources", []):
     rel = item.get("path", "")
     expected = item.get("sha256", "")
@@ -284,7 +309,7 @@ for item in evidence.get("sources", []):
         fail("invalid A13 evidence digest " + rel)
     if not (ROOT / rel).is_file():
         fail("missing A13 evidence source " + rel)
-    if sha(rel) != expected:
+    if rel not in evolving_after_a13 and sha(rel) != expected:
         fail("A13 evidence source digest drifted: " + rel)
 
 print("A13 Linux desktop lifecycle/integration capability detection: OK")

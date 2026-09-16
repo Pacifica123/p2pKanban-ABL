@@ -260,8 +260,12 @@ if current_stage == "A12" and "canonical UTS pending" not in status:
 if current_stage != "A12" and "canonical UTS green" not in status:
     fail("later stage must preserve A12 canonical UTS-green provenance")
 next_sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A13" not in next_sequence or "lifecycle/integration capability detection" not in next_sequence:
-    fail("next stage after A12 is not A13 lifecycle/integration")
+if current_stage == "A12":
+    if "A13" not in next_sequence or "lifecycle/integration capability detection" not in next_sequence:
+        fail("next stage after A12 is not A13 lifecycle/integration")
+else:
+    if "A12 implemented boundary" not in next_sequence:
+        fail("post-A12 sequence lost the implemented A12 boundary")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
 for token in ["DEBT-A12-001", "roaming-v1-unsupported", "DEBT-A12-002", "payload.appearance", "CORR-A12-001", "E0515"]:
     if token not in debt:

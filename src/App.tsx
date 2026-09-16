@@ -42,6 +42,7 @@ import {
 } from './features/parity/api/parity';
 import { getBackendVersion } from './features/system/api/version';
 import { getIntegrationCapabilities, takeDeepLinkIntents } from './features/system/api/integration';
+import { getLanBridgeStatus, listLanBridgeAddresses, startLanBridge, stopLanBridge } from './features/system/api/lanBridge';
 import { getApiTransportKind } from './shared/api/client';
 import type {
   ActivitySummary,
@@ -56,6 +57,7 @@ import type {
   DeepLinkIntentSummary,
   IntegrationCapabilities,
   LabelSummary,
+  LanBridgeStatus,
   VaultStatus,
   WorkspaceSummary,
 } from './shared/api/types';
@@ -77,6 +79,12 @@ export default function App() {
   const [vault, setVault] = useState<VaultStatus | null>(null);
   const [integration, setIntegration] = useState<IntegrationCapabilities | null>(null);
   const [deepLinkIntents, setDeepLinkIntents] = useState<DeepLinkIntentSummary[]>([]);
+  const [lanBridgeAddresses, setLanBridgeAddresses] = useState<string[]>([]);
+  const [lanBridgeAddress, setLanBridgeAddress] = useState('');
+  const [lanBridgeTtl, setLanBridgeTtl] = useState('300');
+  const [lanBridgeStatus, setLanBridgeStatus] = useState<LanBridgeStatus | null>(null);
+  const [lanBridgeCapability, setLanBridgeCapability] = useState('');
+  const [lanBridgeDevicePublicKey, setLanBridgeDevicePublicKey] = useState('');
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSummary | null>(null);
   const [boards, setBoards] = useState<BoardSummary[]>([]);
@@ -114,13 +122,18 @@ export default function App() {
       listWorkspaces(),
       getIntegrationCapabilities(),
       takeDeepLinkIntents(),
+      listLanBridgeAddresses(),
+      getLanBridgeStatus(),
     ])
-      .then(([healthValue, vaultValue, workspaceValues, integrationValue, intents]) => {
+      .then(([healthValue, vaultValue, workspaceValues, integrationValue, intents, bridgeAddresses, bridgeStatus]) => {
         setHealth(healthValue);
         setVault(vaultValue);
         setWorkspaces(workspaceValues);
         setIntegration(integrationValue);
         setDeepLinkIntents(intents.slice(-5));
+        setLanBridgeAddresses(bridgeAddresses);
+        setLanBridgeAddress((current) => current || bridgeAddresses[0] || '');
+        setLanBridgeStatus(bridgeStatus);
       })
       .catch((reason: unknown) => setError(message(reason)));
 
@@ -139,6 +152,50 @@ export default function App() {
       if (intents.length > 0) {
         setDeepLinkIntents((current) => [...current, ...intents].slice(-5));
       }
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function refreshLanBridge(): Promise<void> {
+    try {
+      const [addresses, status] = await Promise.all([listLanBridgeAddresses(), getLanBridgeStatus()]);
+      setLanBridgeAddresses(addresses);
+      setLanBridgeAddress((current) => addresses.includes(current) ? current : (addresses[0] || ''));
+      setLanBridgeStatus(status);
+      if (status.lifecycle !== 'listening') {
+        setLanBridgeCapability('');
+        setLanBridgeDevicePublicKey('');
+      }
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function startLanBridgeSession(): Promise<void> {
+    setError(null);
+    if (!lanBridgeAddress) {
+      setError('No private/link-local IPv4 address is available for the bounded LAN bridge.');
+      return;
+    }
+    try {
+      const ttl = Number(lanBridgeTtl);
+      const started = await startLanBridge(lanBridgeAddress, ttl);
+      setLanBridgeStatus(started);
+      setLanBridgeCapability(started.capability);
+      setLanBridgeDevicePublicKey(started.devicePublicKey);
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function stopLanBridgeSession(): Promise<void> {
+    setError(null);
+    try {
+      const stopped = await stopLanBridge();
+      setLanBridgeStatus(stopped);
+      setLanBridgeCapability('');
+      setLanBridgeDevicePublicKey('');
     } catch (reason) {
       setError(message(reason));
     }
@@ -429,7 +486,7 @@ export default function App() {
     <main className="app-shell" aria-labelledby="app-title">
       <header className="topbar">
         <div>
-          <p className="eyebrow">ARCH NATIVE · A13 DESKTOP INTEGRATION</p>
+          <p className="eyebrow">ARCH NATIVE · A14 BOUNDED LAN COMPATIBILITY</p>
           <h1 id="app-title">p2pKanban</h1>
         </div>
         <div className="status-stack" aria-live="polite">
@@ -440,6 +497,7 @@ export default function App() {
           <span>roaming/1 unsupported parity changes: <strong>{unsyncedParityCount}</strong></span>
           <span>session: <strong>{integration?.sessionType ?? 'detecting'}</strong>{integration ? ` · ${integration.desktop}` : ''}</span>
           <span>notifications/tray: <strong>{integration ? `${integration.notifications}/${integration.statusNotifier}` : 'detecting'}</strong></span>
+          <span>LAN bridge: <strong>{lanBridgeStatus?.lifecycle ?? 'stopped'}</strong></span>
         </div>
       </header>
 
@@ -460,6 +518,49 @@ export default function App() {
           {deepLinkIntents.length === 0 ? <small>None received in this session.</small> : deepLinkIntents.map((intent, index) => (
             <small key={`${intent.canonical}-${index}`}>{intent.kind}{intent.entityId ? ` · ${intent.entityId}` : ''}</small>
           ))}
+        </div>
+      </section>
+
+      <section className="lan-bridge-strip" aria-label="Bounded LAN compatibility bridge">
+        <div className="lan-bridge-summary">
+          <p className="kicker">A14 bounded LAN compatibility</p>
+          <strong>{lanBridgeStatus?.lifecycle ?? 'stopped'} · off by default</strong>
+          <span>Short-lived pairing/migration bridge only. Normal planner operation does not listen on TCP.</span>
+          <small>Requires durable SecretVault; one authenticated request consumes the capability and closes the listener.</small>
+        </div>
+        <div className="lan-bridge-controls">
+          <label>LAN address
+            <select value={lanBridgeAddress} disabled={lanBridgeStatus?.lifecycle === 'listening'} onChange={(event) => setLanBridgeAddress(event.target.value)}>
+              {lanBridgeAddresses.length === 0 ? <option value="">No private IPv4 detected</option> : lanBridgeAddresses.map((address) => <option key={address} value={address}>{address}</option>)}
+            </select>
+          </label>
+          <label>TTL
+            <select value={lanBridgeTtl} disabled={lanBridgeStatus?.lifecycle === 'listening'} onChange={(event) => setLanBridgeTtl(event.target.value)}>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+            </select>
+          </label>
+          <div className="lan-bridge-buttons">
+            <button type="button" disabled={vault?.durable !== 'true' || !lanBridgeAddress || lanBridgeStatus?.lifecycle === 'listening'} onClick={() => void startLanBridgeSession()}>Start compatibility bridge</button>
+            <button type="button" disabled={lanBridgeStatus?.lifecycle !== 'listening'} onClick={() => void stopLanBridgeSession()}>Stop</button>
+            <button type="button" onClick={() => void refreshLanBridge()}>Refresh</button>
+          </div>
+        </div>
+        <div className="lan-bridge-session">
+          <span>endpoint: <strong>{lanBridgeStatus?.endpoint || 'not listening'}</strong></span>
+          <span>attempts: <strong>{lanBridgeStatus?.attempts ?? '0'}</strong>{lanBridgeStatus?.lastResult ? ` · ${lanBridgeStatus.lastResult}` : ''}</span>
+          {lanBridgeCapability ? (
+            <>
+              <small>Pairing descriptor — the private device key never leaves this native process:</small>
+              <code>device public key: {lanBridgeDevicePublicKey}</code>
+              <code>one-time capability: {lanBridgeCapability}</code>
+            </>
+          ) : lanBridgeStatus?.lifecycle === 'listening' ? (
+            <small>Capability is not recoverable after a WebView reload. Stop and start a new bridge if it was lost.</small>
+          ) : (
+            <small>No capability is active.</small>
+          )}
         </div>
       </section>
 
@@ -664,7 +765,7 @@ export default function App() {
         </section>
       </section>
 
-      <footer><span>A13 integration detection · Wayland/X11 + D-Bus capabilities + validated deep links</span><span>Tray/systemd background lifecycle remains disabled; planner works in degraded desktop sessions</span></footer>
+      <footer><span>A14 bounded LAN compatibility · explicit TTL + one-time encrypted capability + single allowlisted endpoint</span><span>No firewall mutation, mDNS, daemon, or default listener; A13 desktop integration remains foreground-only</span></footer>
     </main>
   );
 }

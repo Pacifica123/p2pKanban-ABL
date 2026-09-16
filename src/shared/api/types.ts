@@ -127,3 +127,18 @@ export interface ActivitySummary {
 export interface ParityUnsyncedCount {
   count: string;
 }
+
+
+export interface LanBridgeStatus {
+  lifecycle: 'stopped' | 'listening' | 'completed' | 'expired' | 'failed';
+  bindAddress: string;
+  endpoint: string;
+  expiresAtUnix: string;
+  attempts: string;
+  lastResult: string;
+}
+
+export interface LanBridgeStartResult extends LanBridgeStatus {
+  capability: string;
+  devicePublicKey: string;
+}
