@@ -446,3 +446,24 @@ textarea {
   .activity-entry { grid-template-columns: 1fr; }
   .activity-entry time { text-align: left; }
 }
+
+/* A13 desktop lifecycle/integration capability surface */
+.integration-strip {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(18rem, 1.25fr) minmax(15rem, .9fr);
+  gap: .75rem;
+  margin-bottom: 1rem;
+  padding: .85rem;
+  border: 1px solid rgb(174 184 255 / 16%);
+  border-radius: .9rem;
+  background: rgb(12 19 38 / 72%);
+}
+.integration-strip > div { display: grid; gap: .35rem; min-width: 0; }
+.integration-strip span, .integration-strip small { color: #929eb8; overflow-wrap: anywhere; }
+.integration-actions { align-content: start; }
+.integration-actions button { justify-self: start; }
+.deep-link-history { max-height: 7.5rem; overflow: auto; }
+.deep-link-history small { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+@media (max-width: 900px) {
+  .integration-strip { grid-template-columns: 1fr; }
+}

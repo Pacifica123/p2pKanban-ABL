@@ -322,7 +322,10 @@ status = read("docs/IMPLEMENTATION_STATUS.md")
 if "A11 device-link/2 + web-node-link/bundle migration" not in status:
     fail("A11 status ledger missing")
 next_sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
-if "A12" not in next_sequence or "labels/comments/activity/appearance parity" not in next_sequence:
+if "A12" not in next_sequence or (
+    "labels/comments/activity/appearance parity" not in next_sequence
+    and "## A12 implemented boundary" not in next_sequence
+):
     fail("A12 parity sequence provenance missing")
 debt = read("docs/architecture/08-implementation-corrections-and-debt.md")
 for token in ["CORR-A11-001", "CORR-A11-002", "CORR-A11-003", "serde 1.0.228", "no A10b/A09c", "network-fetch", "DEBT-A11-002", "BEGIN IMMEDIATE"]:

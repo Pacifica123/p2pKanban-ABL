@@ -20,7 +20,7 @@ A11 implemented/acceptance target:
 - provide deterministic malformed/replay/downgrade/rollback tests against A00 device-link and portable-bundle fixtures;
 - keep browser/Docker node-link assumptions outside the native runtime.
 
-A11 canonical UTS is green. The current architecture patch is **A12 — labels/comments/activity/appearance parity**. After A12 canonical UTS is green, proceed to **A13 — lifecycle/integration capability detection**.
+A11 and A12 canonical UTS are green. The current architecture patch is **A13 — lifecycle/integration capability detection**. After A13 canonical UTS is green, proceed to **A14 — optional bounded LAN compatibility bridge**.
 
 
 ## A11 implemented boundary
@@ -33,3 +33,10 @@ The WebView still has no generic filesystem/keyring/network privilege. Live Nost
 ## A12 implemented boundary
 
 A12 promotes labels/card-label edges, comments, activity provenance and board appearance to first-class native schema/application/IPC/UI contracts. Label/comment mutations are durable but recorded separately as `roaming-v1-unsupported`; appearance alone reuses the proven A10 `board.appearance.put` path. A11 portable parity sections are materialized during fresh-profile import without generating local mutation markers. No new WebView filesystem/keyring/network privilege is introduced.
+
+
+## A13 implemented boundary
+
+A13 detects Wayland/X11 plus session D-Bus notification/StatusNotifier/portal capabilities, keeps tray/systemd background lifecycle disabled, and extends the A06 private activation socket with a validated bounded `deep-link-v1` message while preserving `activate-main-v1`. The WebView receives only typed capability/intents; no generic D-Bus/shell/filesystem privilege is exposed. Package-level custom-scheme registration is deferred to A15 and missing desktop services remain supported degraded mode.
+
+After canonical A13 Cargo/runtime UTS is green, the exact next architecture patch is **A14 — optional bounded LAN compatibility bridge, off by default**.

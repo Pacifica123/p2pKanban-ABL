@@ -189,3 +189,17 @@ appearance expansion.
 The first canonical A12 Cargo run passed deterministic/frontend/offline-lock/fetch gates and then failed both `cargo test --locked --offline` and `cargo build --locked --offline` with Rust `E0515`. `section_array()` parsed an opaque portable section into a function-local `serde_json::Value` and attempted to return `Vec<&Map<String, Value>>`; those references could not outlive the local parsed value.
 
 A12 now returns owned `Map<String, Value>` values by cloning each validated object from the parsed array. Materialization borrows those owned maps only within the caller loop, preserving the same validation, stable IDs and atomic import behavior without extending any lifetime unsafely. The only host warning observed in the same run—an unused `ParityRepository` test import—is removed as compile hygiene. `tools/check_a12.py` now rejects reintroduction of a borrowed `section_array` result.
+
+## A13 lifecycle/integration notes
+
+### DEBT-A13-001 — capability detection is not notification/tray delivery
+
+A13 probes session D-Bus ownership for Desktop Notifications, StatusNotifierWatcher and the desktop portal but does not start services, create a tray icon or send arbitrary notification payloads. This is intentional: planner correctness must not depend on those services and visible tray/notification behavior still requires the KDE/GNOME/X11 experiment matrix.
+
+### DEBT-A13-002 — package registration is deferred
+
+The native process validates and routes `p2pkanban://` arguments, but A13 does not install a `.desktop` x-scheme-handler or MIME association. Package-owned desktop registration belongs to A15; portable bundle file-open routing remains later integration/recovery work.
+
+### DEBT-A13-003 — deep-link navigation is an intent, not hidden repository traversal
+
+A13 queues validated workspace/board/card identifiers and surfaces them through typed IPC. It does not invent cross-repository lookup/navigation semantics merely to auto-open an entity. Application-level navigation resolution can be added only when an explicit lookup contract exists.

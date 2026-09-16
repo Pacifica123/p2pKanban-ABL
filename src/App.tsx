@@ -41,6 +41,7 @@ import {
   setCardLabel,
 } from './features/parity/api/parity';
 import { getBackendVersion } from './features/system/api/version';
+import { getIntegrationCapabilities, takeDeepLinkIntents } from './features/system/api/integration';
 import { getApiTransportKind } from './shared/api/client';
 import type {
   ActivitySummary,
@@ -52,6 +53,8 @@ import type {
   ChecklistSummary,
   ColumnSummary,
   CommentSummary,
+  DeepLinkIntentSummary,
+  IntegrationCapabilities,
   LabelSummary,
   VaultStatus,
   WorkspaceSummary,
@@ -72,6 +75,8 @@ function prettyJson(value: string): string {
 export default function App() {
   const [health, setHealth] = useState<BackendVersion | null>(null);
   const [vault, setVault] = useState<VaultStatus | null>(null);
+  const [integration, setIntegration] = useState<IntegrationCapabilities | null>(null);
+  const [deepLinkIntents, setDeepLinkIntents] = useState<DeepLinkIntentSummary[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSummary | null>(null);
   const [boards, setBoards] = useState<BoardSummary[]>([]);
@@ -103,14 +108,41 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void Promise.all([getBackendVersion(), getVaultStatus(), listWorkspaces()])
-      .then(([healthValue, vaultValue, workspaceValues]) => {
+    void Promise.all([
+      getBackendVersion(),
+      getVaultStatus(),
+      listWorkspaces(),
+      getIntegrationCapabilities(),
+      takeDeepLinkIntents(),
+    ])
+      .then(([healthValue, vaultValue, workspaceValues, integrationValue, intents]) => {
         setHealth(healthValue);
         setVault(vaultValue);
         setWorkspaces(workspaceValues);
+        setIntegration(integrationValue);
+        setDeepLinkIntents(intents.slice(-5));
       })
       .catch((reason: unknown) => setError(message(reason)));
+
+    const onFocus = () => { void refreshIntegration(); };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
+
+  async function refreshIntegration(): Promise<void> {
+    try {
+      const [capabilities, intents] = await Promise.all([
+        getIntegrationCapabilities(),
+        takeDeepLinkIntents(),
+      ]);
+      setIntegration(capabilities);
+      if (intents.length > 0) {
+        setDeepLinkIntents((current) => [...current, ...intents].slice(-5));
+      }
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
 
   function clearBoardState(): void {
     setOpenedBoard(null);
@@ -397,7 +429,7 @@ export default function App() {
     <main className="app-shell" aria-labelledby="app-title">
       <header className="topbar">
         <div>
-          <p className="eyebrow">ARCH NATIVE · A12 PARITY SURFACE</p>
+          <p className="eyebrow">ARCH NATIVE · A13 DESKTOP INTEGRATION</p>
           <h1 id="app-title">p2pKanban</h1>
         </div>
         <div className="status-stack" aria-live="polite">
@@ -406,10 +438,30 @@ export default function App() {
           <span>vault: <strong>{vault?.mode ?? 'checking'}</strong>{vault ? ` · ${vault.state} · durable secrets ${vault.durable === 'true' ? 'enabled' : 'disabled'}` : ''}</span>
           <span>roaming-capable pending: <strong>{pendingCount}</strong></span>
           <span>roaming/1 unsupported parity changes: <strong>{unsyncedParityCount}</strong></span>
+          <span>session: <strong>{integration?.sessionType ?? 'detecting'}</strong>{integration ? ` · ${integration.desktop}` : ''}</span>
+          <span>notifications/tray: <strong>{integration ? `${integration.notifications}/${integration.statusNotifier}` : 'detecting'}</strong></span>
         </div>
       </header>
 
       {error ? <div className="error-banner" role="alert">{error}</div> : null}
+
+      <section className="integration-strip" aria-label="Desktop integration capabilities">
+        <div>
+          <p className="kicker">A13 lifecycle/integration</p>
+          <strong>{integration?.sessionType ?? 'unknown'} · {integration?.desktop ?? 'desktop unknown'}</strong>
+          <span>D-Bus {integration?.sessionBus ?? 'detecting'} · notifications {integration?.notifications ?? 'detecting'} · StatusNotifier {integration?.statusNotifier ?? 'detecting'} · portal {integration?.portal ?? 'detecting'}</span>
+        </div>
+        <div className="integration-actions">
+          <span>tray lifecycle: <strong>{integration?.trayLifecycle ?? 'disabled'}</strong> · systemd user service: <strong>{integration?.systemdUserService ?? 'disabled'}</strong></span>
+          <button type="button" onClick={() => void refreshIntegration()}>Refresh integration</button>
+        </div>
+        <div className="deep-link-history">
+          <span>Validated deep-link intents: <strong>{deepLinkIntents.length}</strong></span>
+          {deepLinkIntents.length === 0 ? <small>None received in this session.</small> : deepLinkIntents.map((intent, index) => (
+            <small key={`${intent.canonical}-${index}`}>{intent.kind}{intent.entityId ? ` · ${intent.entityId}` : ''}</small>
+          ))}
+        </div>
+      </section>
 
       <section className="planner-grid" aria-label="Local durable planner">
         <aside className="panel">
@@ -612,7 +664,7 @@ export default function App() {
         </section>
       </section>
 
-      <footer><span>A12 parity surface · explicit roaming/1 unsupported ledger for labels/comments</span><span>Appearance reuses A10 sync · secrets remain behind A09 SecretVault</span></footer>
+      <footer><span>A13 integration detection · Wayland/X11 + D-Bus capabilities + validated deep links</span><span>Tray/systemd background lifecycle remains disabled; planner works in degraded desktop sessions</span></footer>
     </main>
   );
 }

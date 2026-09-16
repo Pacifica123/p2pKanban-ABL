@@ -4,6 +4,7 @@ use tauri::State;
 
 use crate::{
     application::{
+        integration::IntegrationService,
         parity::{ActivityView, AppearanceView, CommentView, LabelView, ParityService, ParityServiceError},
         planner::{
             CardView, ChecklistItemView, ChecklistView, ColumnView, PlannerService, PlannerServiceError,
@@ -13,6 +14,7 @@ use crate::{
         workspace::{BoardView, WorkspaceService, WorkspaceServiceError, WorkspaceView},
         ApplicationServices,
     },
+    domain::integration::{DeepLinkIntent, IntegrationCapabilities},
     infrastructure::linux::xdg::ProfileDiagnostics,
 };
 
@@ -36,6 +38,28 @@ fn profile_diagnostics_to_wire(view: &ProfileDiagnostics) -> BTreeMap<&'static s
             "runtimeActivation",
             if view.runtime_activation_available { "available" } else { "unavailable" }.to_owned(),
         ),
+    ])
+}
+
+fn integration_capabilities_to_wire(view: IntegrationCapabilities) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("sessionType", view.session.as_str().to_owned()),
+        ("desktop", view.desktop.unwrap_or_else(|| "unknown".to_owned())),
+        ("sessionBus", view.session_bus.as_str().to_owned()),
+        ("notifications", view.notifications.as_str().to_owned()),
+        ("statusNotifier", view.status_notifier.as_str().to_owned()),
+        ("portal", view.portal.as_str().to_owned()),
+        ("runtimeActivation", view.runtime_activation.as_str().to_owned()),
+        ("trayLifecycle", "disabled".to_owned()),
+        ("systemdUserService", "disabled".to_owned()),
+    ])
+}
+
+fn deep_link_intent_to_wire(intent: DeepLinkIntent) -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("kind", intent.target.kind().to_owned()),
+        ("entityId", intent.target.entity_id().unwrap_or_default()),
+        ("canonical", intent.canonical),
     ])
 }
 
@@ -591,13 +615,37 @@ pub fn desktop_api_unsynced_parity_count(workspaceId:String, boardId:String, par
     parity.unsynced_parity_count(&workspaceId,&boardId).map(|count|BTreeMap::from([("count",count.to_string())])).map_err(parity_error_code)
 }
 
+#[tauri::command]
+pub fn desktop_api_integration_capabilities(
+    integration: State<'_, IntegrationService>,
+) -> BTreeMap<&'static str, String> {
+    integration_capabilities_to_wire(integration.capabilities())
+}
+
+#[tauri::command]
+pub fn desktop_api_take_deep_link_intents(
+    integration: State<'_, IntegrationService>,
+) -> Vec<BTreeMap<&'static str, String>> {
+    integration
+        .take_deep_links()
+        .into_iter()
+        .map(deep_link_intent_to_wire)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{health_to_wire, profile_diagnostics_to_wire, vault_status_to_wire};
+    use super::{
+        deep_link_intent_to_wire, health_to_wire, integration_capabilities_to_wire,
+        profile_diagnostics_to_wire, vault_status_to_wire,
+    };
     use crate::{
         application::{
             system::HealthView,
             vault::{VaultState, VaultStatus},
+        },
+        domain::integration::{
+            parse_deep_link, CapabilityState, IntegrationCapabilities, SessionKind,
         },
         infrastructure::linux::xdg::ProfileDiagnostics,
     };
@@ -649,4 +697,29 @@ mod tests {
         );
         assert_eq!(payload.len(), 4);
     }
+
+    #[test]
+    fn a13_integration_wire_exposes_capabilities_and_validated_intents_only() {
+        let payload = integration_capabilities_to_wire(IntegrationCapabilities {
+            session: SessionKind::X11,
+            desktop: Some("KDE".into()),
+            session_bus: CapabilityState::Available,
+            notifications: CapabilityState::Unavailable,
+            status_notifier: CapabilityState::Available,
+            portal: CapabilityState::Unavailable,
+            runtime_activation: CapabilityState::Available,
+        });
+        assert_eq!(payload.get("sessionType").map(String::as_str), Some("x11"));
+        assert_eq!(payload.get("notifications").map(String::as_str), Some("unavailable"));
+        assert_eq!(payload.get("trayLifecycle").map(String::as_str), Some("disabled"));
+        assert_eq!(payload.get("systemdUserService").map(String::as_str), Some("disabled"));
+        assert_eq!(payload.len(), 9);
+
+        let intent = deep_link_intent_to_wire(
+            parse_deep_link("p2pkanban://board/11111111-2222-4333-8444-555555555555").unwrap(),
+        );
+        assert_eq!(intent.get("kind").map(String::as_str), Some("board"));
+        assert_eq!(intent.get("entityId").map(String::as_str), Some("11111111-2222-4333-8444-555555555555"));
+    }
+
 }

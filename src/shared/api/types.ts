@@ -15,6 +15,25 @@ export interface ProfileDiagnostics {
   runtimeActivation: 'available' | 'unavailable';
 }
 
+
+export interface IntegrationCapabilities {
+  sessionType: 'wayland' | 'x11' | 'unknown';
+  desktop: string;
+  sessionBus: 'available' | 'unavailable';
+  notifications: 'available' | 'unavailable';
+  statusNotifier: 'available' | 'unavailable';
+  portal: 'available' | 'unavailable';
+  runtimeActivation: 'available' | 'unavailable';
+  trayLifecycle: 'disabled';
+  systemdUserService: 'disabled';
+}
+
+export interface DeepLinkIntentSummary {
+  kind: 'activate' | 'workspace' | 'board' | 'card';
+  entityId: string;
+  canonical: string;
+}
+
 export interface WorkspaceSummary {
   id: string;
   title: string;

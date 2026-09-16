@@ -6,13 +6,15 @@ mod navigation_policy;
 
 use application::{
     import::ImportService,
+    integration::{IntegrationAdapter, IntegrationService},
     parity::{ParityService, RandomParityIds},
     planner::{PlannerService, RandomPlannerIds},
     workspace::{RandomUuidGenerator, WorkspaceService},
 };
 use infrastructure::{
     linux::{
-        instance::{self, InstanceRole, SecondaryInstance, ACTIVATE_MAIN_V1},
+        instance::{self, InstanceRole, SecondaryInstance, ACTIVATE_MAIN_V1, MAX_ACTIVATION_PAYLOAD_BYTES},
+        integration::LinuxIntegrationAdapter,
         secrets::bootstrap_vault,
         xdg::{DesktopPaths, XdgEnvironment},
     },
@@ -21,23 +23,84 @@ use infrastructure::{
         repository::SqlitePlannerRepository, workspace::SqliteWorkspaceCatalog,
     },
 };
+use crate::domain::integration::{
+    decode_deep_link_activation, encode_deep_link_activation, parse_deep_link, DeepLinkIntent,
+};
 use tauri::{
     webview::{NewWindowResponse, WebviewWindowBuilder},
     Manager, WebviewUrl,
 };
 
+
+fn startup_deep_link() -> Result<Option<DeepLinkIntent>, String> {
+    let mut found = None;
+    for argument in std::env::args().skip(1) {
+        if argument == "--integration-capabilities-json" {
+            continue;
+        }
+        if !argument.starts_with("p2pkanban:") {
+            continue;
+        }
+        if found.is_some() {
+            return Err("only one p2pkanban deep link may be supplied per launch".to_owned());
+        }
+        found = Some(
+            parse_deep_link(&argument)
+                .map_err(|error| format!("invalid p2pkanban deep link: {error:?}"))?,
+        );
+    }
+    Ok(found)
+}
+
+fn integration_probe_requested() -> bool {
+    std::env::args().skip(1).any(|argument| argument == "--integration-capabilities-json")
+}
+
+fn print_integration_probe(prepared: &infrastructure::linux::xdg::PreparedDesktopPaths) {
+    let adapter = LinuxIntegrationAdapter::new(prepared.activation_socket().is_some());
+    let capabilities = adapter.detect();
+    println!(
+        "{}",
+        serde_json::json!({
+            "sessionType": capabilities.session.as_str(),
+            "desktop": capabilities.desktop.unwrap_or_else(|| "unknown".to_owned()),
+            "sessionBus": capabilities.session_bus.as_str(),
+            "notifications": capabilities.notifications.as_str(),
+            "statusNotifier": capabilities.status_notifier.as_str(),
+            "portal": capabilities.portal.as_str(),
+            "runtimeActivation": capabilities.runtime_activation.as_str(),
+            "trayLifecycle": "disabled",
+            "systemdUserService": "disabled",
+        })
+    );
+}
+
 fn run() -> Result<(), String> {
+    let startup_deep_link = startup_deep_link()?;
     let prepared = DesktopPaths::resolve(&XdgEnvironment::current(), "default")
         .map_err(|err| format!("unable to resolve XDG profile paths: {err:?}"))?
         .prepare()
         .map_err(|err| format!("unable to prepare XDG profile paths: {err:?}"))?;
+
+    if integration_probe_requested() {
+        print_integration_probe(&prepared);
+        return Ok(());
+    }
 
     let mut primary = match instance::acquire(&prepared)
         .map_err(|err| format!("unable to acquire profile instance control: {err:?}"))?
     {
         InstanceRole::Primary(primary) => primary,
         InstanceRole::Secondary(SecondaryInstance::Routed) => {
-            eprintln!("p2pKanban is already running; activation routed to the primary instance");
+            if let Some(intent) = &startup_deep_link {
+                let payload = encode_deep_link_activation(intent);
+                if !instance::route_payload(&prepared, &payload) {
+                    return Err("primary instance was activated but validated deep-link routing failed".to_owned());
+                }
+                eprintln!("p2pKanban is already running; validated deep link routed to the primary instance");
+            } else {
+                eprintln!("p2pKanban is already running; activation routed to the primary instance");
+            }
             return Ok(());
         }
         InstanceRole::Secondary(SecondaryInstance::RoutingUnavailable) => {
@@ -70,6 +133,12 @@ fn run() -> Result<(), String> {
         Box::new(parity_repository),
         Box::new(RandomParityIds),
     );
+    let integration_service = IntegrationService::new(Box::new(LinuxIntegrationAdapter::new(
+        prepared.activation_socket().is_some(),
+    )));
+    if let Some(intent) = startup_deep_link {
+        integration_service.enqueue_deep_link(intent);
+    }
 
     let activation_receiver = primary.take_activation_receiver();
     let diagnostics = prepared.diagnostics();
@@ -83,6 +152,7 @@ fn run() -> Result<(), String> {
         .manage(vault_service)
         .manage(import_service)
         .manage(parity_service)
+        .manage(integration_service)
         .invoke_handler(tauri::generate_handler![
             desktop_api::desktop_api_health,
             desktop_api::desktop_api_profile_diagnostics,
@@ -119,7 +189,9 @@ fn run() -> Result<(), String> {
             desktop_api::desktop_api_get_appearance,
             desktop_api::desktop_api_set_appearance,
             desktop_api::desktop_api_list_activity,
-            desktop_api::desktop_api_unsynced_parity_count
+            desktop_api::desktop_api_unsynced_parity_count,
+            desktop_api::desktop_api_integration_capabilities,
+            desktop_api::desktop_api_take_deep_link_intents
         ])
         .setup(move |app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
@@ -135,9 +207,22 @@ fn run() -> Result<(), String> {
             if let Some(receiver) = activation_receiver {
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
-                    let mut buf = [0_u8; 64];
+                    let mut buf = [0_u8; MAX_ACTIVATION_PAYLOAD_BYTES];
                     while let Ok(read) = receiver.recv(&mut buf) {
-                        if &buf[..read] != ACTIVATE_MAIN_V1 {
+                        let payload = &buf[..read];
+                        let accepted = if payload == ACTIVATE_MAIN_V1 {
+                            true
+                        } else if let Ok(intent) = decode_deep_link_activation(payload) {
+                            eprintln!(
+                                "p2pKanban integration: accepted validated deep-link target={}",
+                                intent.target.kind()
+                            );
+                            handle.state::<IntegrationService>().enqueue_deep_link(intent);
+                            true
+                        } else {
+                            false
+                        };
+                        if !accepted {
                             continue;
                         }
                         if let Some(window) = handle.get_webview_window("main") {

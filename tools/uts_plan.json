@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "stage": "A12",
+  "stage": "A13",
   "description": "Canonical UserTestSpace verification through A12. A12 adds schema v6 first-class labels/card-labels/comments/activity/appearance parity. Label/comment mutations are durable but explicitly recorded as roaming-v1-unsupported instead of being fed into A10 roaming; board appearance reuses the proven board.appearance.put path. A11 portable parity sections materialize without local mutation markers. WebView remains permission-minimal. Cargo network preparation/offline byte-equivalent lock re-resolution remains unchanged and mandatory.",
   "deterministic": [
     {
@@ -177,6 +177,14 @@
         "python3",
         "-B",
         "tools/check_a12.py"
+      ]
+    },
+    {
+      "id": "a13",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a13.py"
       ]
     }
   ],
@@ -368,6 +376,28 @@
           "--",
           "--nocapture"
         ]
+      },
+      {
+        "id": "a13-rust-integration",
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "src-tauri/Cargo.toml",
+          "--locked",
+          "--offline",
+          "a13_",
+          "--",
+          "--nocapture"
+        ]
+      },
+      {
+        "id": "a13-desktop-integration",
+        "command": [
+          "python3",
+          "-B",
+          "tools/a13_host_integration_probe.py"
+        ]
       }
     ]
   },
@@ -392,6 +422,10 @@
     "A12 UI: create a label, assign/unassign it to a card, create/delete a comment, close/reopen, and confirm durable local state plus activity provenance.",
     "A12 UI: confirm label/comment mutations increase the separate roaming/1 unsupported parity counter and are not presented as remotely converged.",
     "A12 UI: save valid board appearance JSON, close/reopen, confirm it persists, and confirm the normal A10 pending counter reflects the roaming-capable appearance mutation.",
-    "A12 compatibility: label/comment roaming is intentionally not claimed until a versioned wire operation exists; appearance uses the existing board.appearance.put family with the A12 normalized payload mapping."
+    "A12 compatibility: label/comment roaming is intentionally not claimed until a versioned wire operation exists; appearance uses the existing board.appearance.put family with the A12 normalized payload mapping.",
+    "A13 KDE Plasma Wayland: confirm sessionType=wayland and record Notifications/StatusNotifier/portal capability states; missing services must not break planner use.",
+    "A13 GNOME Wayland: confirm no visible tray host is treated as supported degraded mode and normal window close exits the process.",
+    "A13 X11: confirm sessionType=x11, second-instance p2pkanban://activate focus routing works, and no systemd user service/linger is enabled.",
+    "A13 packaging non-claim: custom x-scheme-handler registration is not installed until the A15 package stage; current deep-link evidence is direct argv + single-instance routing."
   ]
 }

@@ -8,6 +8,7 @@ use std::{
 use crate::infrastructure::linux::xdg::PreparedDesktopPaths;
 
 pub const ACTIVATE_MAIN_V1: &[u8] = b"activate-main-v1\n";
+pub const MAX_ACTIVATION_PAYLOAD_BYTES: usize = 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InstanceError {
@@ -60,14 +61,25 @@ fn try_lock_profile_dir(path: &Path) -> Result<Option<fs::File>, InstanceError> 
     Err(InstanceError::Lock(err.kind()))
 }
 
-fn route_activation(socket: Option<&Path>) -> bool {
+fn route_bytes(socket: Option<&Path>, payload: &[u8]) -> bool {
     let Some(socket) = socket else {
         return false;
     };
+    if payload.is_empty() || payload.len() > MAX_ACTIVATION_PAYLOAD_BYTES {
+        return false;
+    }
     UnixDatagram::unbound()
-        .and_then(|sender| sender.send_to(ACTIVATE_MAIN_V1, socket))
-        .map(|written| written == ACTIVATE_MAIN_V1.len())
+        .and_then(|sender| sender.send_to(payload, socket))
+        .map(|written| written == payload.len())
         .unwrap_or(false)
+}
+
+fn route_activation(socket: Option<&Path>) -> bool {
+    route_bytes(socket, ACTIVATE_MAIN_V1)
+}
+
+pub fn route_payload(paths: &PreparedDesktopPaths, payload: &[u8]) -> bool {
+    route_bytes(paths.activation_socket().as_deref(), payload)
 }
 
 fn bind_activation_socket(path: &Path) -> Result<UnixDatagram, InstanceError> {
@@ -155,6 +167,23 @@ mod tests {
         assert_eq!(&buf[..read], ACTIVATE_MAIN_V1);
         drop(primary);
         let _ = fs::remove_dir_all(paths.paths.data_root.parent().unwrap().parent().unwrap());
+    }
+
+    #[test]
+    fn a13_activation_payload_is_bounded_and_uses_existing_socket() {
+        let paths = prepared("a13-payload", true);
+        let mut primary = match acquire(&paths).unwrap() {
+            InstanceRole::Primary(primary) => primary,
+            _ => panic!("expected primary"),
+        };
+        let receiver = primary.take_activation_receiver().unwrap();
+        receiver.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+        let payload = b"deep-link-v1\tp2pkanban://activate\n";
+        assert!(route_payload(&paths, payload));
+        let mut buf = [0_u8; MAX_ACTIVATION_PAYLOAD_BYTES];
+        let read = receiver.recv(&mut buf).unwrap();
+        assert_eq!(&buf[..read], payload);
+        assert!(!route_payload(&paths, &vec![b'x'; MAX_ACTIVATION_PAYLOAD_BYTES + 1]));
     }
 
     #[test]

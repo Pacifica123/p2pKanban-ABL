@@ -205,10 +205,18 @@ if "connect-src 'none'" not in conf.get("app", {}).get("security", {}).get("csp"
 frontend_api = read("src/features/parity/api/parity.ts")
 transport = read("src/shared/transport/desktop.ts")
 ui = read("src/App.tsx")
+current_plan = load("tools/uts_plan.json")
+current_stage = str(current_plan.get("stage", ""))
+stage_match = re.fullmatch(r"A(\d+)", current_stage)
+if not stage_match or int(stage_match.group(1)) < 12:
+    fail("UTS plan regressed below A12")
 for path in ["/parity/labels/list", "/parity/card-labels/set", "/parity/comments/list", "/parity/appearance/set", "/parity/activity/list", "/parity/unsynced-count"]:
     if path not in frontend_api or path not in transport:
         fail("typed desktop parity route missing " + path)
-for token in ["A12 PARITY SURFACE", "roaming/1 unsupported parity changes", "Local provenance", "Board appearance JSON", "local durable comment"]:
+ui_tokens = ["roaming/1 unsupported parity changes", "Local provenance", "Board appearance JSON", "local durable comment"]
+if current_stage == "A12":
+    ui_tokens.insert(0, "A12 PARITY SURFACE")
+for token in ui_tokens:
     if token not in ui:
         fail("A12 UI parity surface missing " + token)
 
@@ -231,9 +239,9 @@ appearance = snapshot.get("payload", {}).get("snapshot", {}).get("appearance")
 if not isinstance(appearance, dict) or appearance.get("boardId") != snapshot.get("boardId"):
     fail("roaming appearance fixture contract drifted")
 
-plan = load("tools/uts_plan.json")
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A12":
-    fail("UTS plan did not advance to A12")
+plan = current_plan
+if plan.get("schemaVersion") != 1:
+    fail("UTS plan schema regressed after A12")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 if "a11" not in ids or "a12" not in ids or ids.index("a11") >= ids.index("a12"):
     fail("A12 deterministic gate missing/not ordered after A11")
@@ -245,8 +253,12 @@ if "--deterministic-only" not in verify or "postbuild.deterministic" not in veri
     fail("canonical UTS strictness regressed")
 
 status = read("docs/IMPLEMENTATION_STATUS.md")
-if "A12 labels/comments/activity/appearance parity" not in status or "canonical UTS pending" not in status:
-    fail("A12 status ledger missing/premature")
+if "A12 labels/comments/activity/appearance parity" not in status:
+    fail("A12 status ledger missing")
+if current_stage == "A12" and "canonical UTS pending" not in status:
+    fail("A12 status ledger prematurely claims acceptance")
+if current_stage != "A12" and "canonical UTS green" not in status:
+    fail("later stage must preserve A12 canonical UTS-green provenance")
 next_sequence = read("docs/NEXT_PATCH_SEQUENCE.md")
 if "A13" not in next_sequence or "lifecycle/integration capability detection" not in next_sequence:
     fail("next stage after A12 is not A13 lifecycle/integration")
@@ -263,6 +275,18 @@ if evidence.get("formatVersion") != 1 or evidence.get("stage") != "A12":
 for key in ["facts", "inferences", "proposals", "unresolved", "externalAnchors", "sources"]:
     if not evidence.get(key):
         fail("A12 evidence missing " + key)
+evolving_after_a12 = {
+    "src-tauri/src/desktop_api.rs",
+    "src-tauri/src/main.rs",
+    "src/shared/transport/desktop.ts",
+    "src/shared/api/types.ts",
+    "src/App.tsx",
+    "src/styles.css",
+    "tools/check_a12.py",
+    "tools/uts_plan.json",
+    "docs/architecture/08-implementation-corrections-and-debt.md",
+    "docs/IMPLEMENTATION_STATUS.md",
+}
 for item in evidence.get("sources", []):
     rel = item.get("path", "")
     expected = item.get("sha256", "")
@@ -272,6 +296,8 @@ for item in evidence.get("sources", []):
         fail("invalid A12 evidence digest " + rel)
     if not (ROOT / rel).is_file():
         fail("missing A12 evidence source " + rel)
+    if current_plan.get("stage") != "A12" and rel in evolving_after_a12:
+        continue
     if sha(rel) != expected:
         fail("A12 evidence source digest drifted: " + rel)
 

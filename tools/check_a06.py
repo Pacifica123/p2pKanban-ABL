@@ -34,9 +34,12 @@ for rel in required:
 cargo = read("src-tauri/Cargo.toml")
 if 'libc = "=0.2.189"' not in cargo:
     fail("Linux flock dependency must be exact-pinned")
-for token in ("systemd", "dbus", "zbus", "nix =", "fs2 ="):
+plan_stage = json.loads(read("tools/uts_plan.json")).get("stage")
+for token in ("systemd", "dbus", "nix =", "fs2 ="):
     if token in cargo.lower():
         fail("A06 introduced an unnecessary platform/runtime dependency: " + token)
+if plan_stage in {"A06", "A07", "A07b", "A08", "A09", "A09b", "A10", "A11", "A12"} and "zbus" in cargo.lower():
+    fail("zbus is not allowed before the A13 Linux integration stage")
 
 profile = read("src-tauri/src/infrastructure/profile.rs")
 for token in (
