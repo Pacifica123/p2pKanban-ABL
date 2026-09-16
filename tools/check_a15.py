@@ -182,10 +182,13 @@ for token in (
     "realSigningKeyUsed",
     '["makechrootpkg", "-h"]',
     '" E: "',
+    '"Usage: makechrootpkg"',
+    '"Flags:"',
+    'help_probe = subprocess.run',
 ):
     if token not in host_probe:
         fail("A15 host packaging probe missing " + token)
-for forbidden in ("sudo", "pacman -S", "mkarchroot", "--detach-sign", '["makechrootpkg", "--help"]'):
+for forbidden in ("sudo", "pacman -S", "mkarchroot", "--detach-sign", '["makechrootpkg", "--help"]', 'run(["makechrootpkg", "-h"]'):
     if forbidden in host_probe:
         fail("A15 canonical UTS probe must remain non-root/non-signing: " + forbidden)
 

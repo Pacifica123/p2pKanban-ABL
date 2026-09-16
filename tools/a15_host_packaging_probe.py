@@ -70,8 +70,21 @@ def main() -> int:
     if namcap_errors:
         fail("namcap PKGBUILD errors:\n" + "\n".join(namcap_errors))
     run(["desktop-file-validate", "p2pkanban.desktop"], stage)
-    # Arch devtools makechrootpkg intentionally uses short -h, not GNU --help.
-    run(["makechrootpkg", "-h"], stage)
+
+    # Arch devtools makechrootpkg prints valid help for -h but exits non-zero.
+    # Binary presence is already proven by shutil.which above, so treat help as
+    # a textual capability sanity-check instead of imposing GNU exit-code
+    # semantics on the Arch shell script.
+    help_probe = subprocess.run(
+        ["makechrootpkg", "-h"],
+        cwd=stage,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    help_output = help_probe.stdout or ""
+    if "Usage: makechrootpkg" not in help_output or "Flags:" not in help_output:
+        fail("makechrootpkg -h did not expose the expected Arch devtools help surface\n" + help_output)
 
     package_list = run(["makepkg", "--packagelist"], stage).strip().splitlines()
     if len(package_list) != 1 or not package_list[0].endswith("p2pkanban-0.1.0-1-x86_64.pkg.tar.zst"):
@@ -110,7 +123,7 @@ def main() -> int:
         "realSigningKeyUsed": False,
         "notes": [
             "makepkg source verification, fail-closed PKGBUILD namcap and desktop-file validation passed non-root.",
-            "makechrootpkg -h completed and repo-add/GPG availability was verified through the required-command PATH gate without host mutation.",
+            "makechrootpkg availability was PATH-verified and its -h output matched the expected Arch devtools help surface without requiring a zero help exit code.",
             "Clean-chroot build, package namcap, pacman Qkk/remove preservation and real release-key signing remain manual A15 evidence.",
         ],
     }

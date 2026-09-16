@@ -64,11 +64,11 @@
     },
     {
       "path": "tools/a15_host_packaging_probe.py",
-      "sha256": "4cbc16bf8188998123571e2fe060e242e044d1578a595445ec9bf915ad8517a0"
+      "sha256": "cc2dcf87558f02c481a66041f4558e06233698596eb15971f7075f7b63bce58b"
     },
     {
       "path": "docs/evidence/A15_PACMAN_PACKAGING.md",
-      "sha256": "6d66df5ee45901717309adf1cb81cca3fbc5aa1b4ac92c053d099d420e3ee94f"
+      "sha256": "1bac7281cd539f529bee975cacf336cb03f965d8179c55489b314feae8972106"
     },
     {
       "path": "docs/architecture/adr/ADR-003-packaging-update-and-rollback.md",

@@ -56,3 +56,5 @@ CORR-A15-001 corrects the Arch host-preflight discovered by canonical UTS: `make
 Package-level `x-scheme-handler/p2pkanban` registration now routes `%u` to the A13 validated argv/single-instance path. Repository staging signs package and pacman DB through an external GPG fingerprint/agent and retains hashes/fingerprint metadata; no private signing material enters the repository. Public AUR/mirror publication remains blocked until the owner supplies a software license. Clean-chroot/package namcap/pacman-Qkk/uninstall and real-key publication remain explicit A15 release evidence.
 
 After A15 acceptance, the next stage is **A16 — backup/doctor/safe-mode/recovery**.
+
+CORR-A15-002 corrects the remaining Arch devtools preflight semantic: `makechrootpkg -h` is accepted by expected help markers even when that help path returns non-zero; executable presence remains separately fail-closed via PATH discovery.

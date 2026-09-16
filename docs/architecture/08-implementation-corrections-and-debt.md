@@ -235,3 +235,11 @@ The canonical UTS can non-root verify release-source binding, `makepkg --verifys
 ### CORR-A15-001 — Arch packaging host-preflight option/lint correction
 
 Canonical A15 UTS on the target Arch-like host proved the packaging commands were installed but exposed two acceptance defects: `makechrootpkg` rejects GNU-style `--help` and documents the short `-h` option, while `namcap PKGBUILD` can emit `E:` diagnostics and still return success. The host probe now uses `makechrootpkg -h`, treats namcap `E:` lines as failure, and the bootstrap PKGBUILD carries a non-routable `https://example.invalid/p2pkanban` metadata URL. This correction changes only packaging acceptance/metadata; runtime, schema, protocol and release-key boundaries remain unchanged. Public publication is still blocked until project-owned origins and an approved software license replace placeholders.
+
+### CORR-A15-002 — makechrootpkg help exit semantics
+
+**Classification:** [FACT] from canonical A15 UTS `20260916T122445Z`.
+**Architecture impact:** packaging host-preflight only; runtime, schema, protocol, package ownership and signing boundaries are unchanged.
+**Status:** corrected inside A15; no A15b stage.
+
+The target Arch `makechrootpkg -h` prints the expected usage/flags surface but exits non-zero. CORR-A15-001 corrected the option spelling but still routed the help probe through the generic `run()` helper, incorrectly treating the tool's help exit status as a capability failure. A15 now proves executable presence with the existing `shutil.which` gate and treats `-h` only as a textual sanity-check: output must contain `Usage: makechrootpkg` and `Flags:` regardless of the help command exit code. This preserves fail-closed detection of a wrong/unexpected executable without imposing GNU-style help exit semantics on Arch devtools.

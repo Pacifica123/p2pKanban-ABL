@@ -67,3 +67,5 @@ Final release evidence remains intentionally external/manual because it changes 
 ## Explicit non-claims
 
 A15 is not AppImage packaging (A17), backup/recovery (A16), an automatic updater, an AUR publication, or a public-license decision. The repository currently carries an explicit packaging notice rather than inventing redistribution rights; public AUR/mirror publication is blocked until the owner supplies a software license.
+
+CORR-A15-002 records the follow-up target-host finding that `makechrootpkg -h` emits its valid Arch devtools help text while returning a non-zero status. The host probe therefore keeps executable presence in the PATH gate and validates the `-h` output by its `Usage: makechrootpkg` and `Flags:` markers without requiring exit code zero. This changes only non-root packaging preflight semantics.

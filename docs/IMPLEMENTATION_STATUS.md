@@ -30,7 +30,7 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | ADR-005 IPC and optional bounded LAN bridge | typed IPC + A14 bounded native LAN adapter | **implemented through A14; bridge remains explicit/off-by-default** | A15 |
 | A14 optional LAN compatibility bridge, off by default | `domain/application/lan_bridge`, Linux bounded HTTP adapter, typed IPC/UI, golden vector + host probe | **implemented; user-reported canonical UTS green** | A15 |
 | ADR-003 pacman-owned packaging/update; AppImage fallback | `packaging/arch/**`, A15 release/source/signing tooling | **accepted and implemented through pacman-owned A15 boundary; host/release acceptance pending** | A15 |
-| A15 PKGBUILD + signed-repo packaging | `packaging/arch/**`, deterministic release source, signed-repo staging, package host probe, `tools/check_a15.py` | **implemented at source/deterministic level; CORR-A15-001 fixes Arch host-preflight option/lint handling; canonical packaging UTS + clean-chroot/release evidence pending** | A16 |
+| A15 PKGBUILD + signed-repo packaging | `packaging/arch/**`, deterministic release source, signed-repo staging, package host probe, `tools/check_a15.py` | **implemented at source/deterministic level; CORR-A15-001/002 fix Arch host-preflight option/lint/help-exit handling; canonical packaging UTS + clean-chroot/release evidence pending** | A16 |
 | A16 backup/doctor/safe-mode/recovery | none yet | **planned** | A16 |
 | A17 AppImage fallback + offline release kit | none yet | **planned** | A17 |
 | A18 performance/power/rolling-release hardening | no measurements yet | **experiment-needed** | A18 |
