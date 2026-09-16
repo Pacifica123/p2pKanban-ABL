@@ -60,6 +60,8 @@ Canonical UTS runs `tools/a15_host_packaging_probe.py` after the normal native b
 - exact archive checksum and retained Cargo/npm/migration/protocol hashes;
 - no generated workspace state or private-key-shaped files in the release stage.
 
+CORR-A15-001 hardens the non-root host preflight after real Arch devtools evidence: `makechrootpkg` is probed with its supported short `-h` option, and `namcap PKGBUILD` output is fail-closed on `E:` diagnostics. The bootstrap PKGBUILD now carries a deliberately non-routable `https://example.invalid/p2pkanban` project URL so internal package lint is structurally complete without inventing a public project origin; release publication must replace that placeholder together with the example repository mirrors.
+
 Final release evidence remains intentionally external/manual because it changes host package state or needs the real release key: clean-chroot build, `namcap` on the produced package, signed repository publication/verification, pacman install/upgrade/`-Qkk`, and uninstall preserving XDG/keyring data.
 
 ## Explicit non-claims

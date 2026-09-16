@@ -55,6 +55,7 @@ for token in (
     "pkgname=p2pkanban",
     "pkgver=0.1.0",
     "pkgrel=1",
+    "url=\'https://example.invalid/p2pkanban\'",
     "arch=('x86_64')",
     "'webkit2gtk-4.1'",
     "'gtk3'",
@@ -179,10 +180,12 @@ for token in (
     '"--verifysource"',
     "cleanChrootExecuted",
     "realSigningKeyUsed",
+    '["makechrootpkg", "-h"]',
+    '" E: "',
 ):
     if token not in host_probe:
         fail("A15 host packaging probe missing " + token)
-for forbidden in ("sudo", "pacman -S", "mkarchroot", "--detach-sign"):
+for forbidden in ("sudo", "pacman -S", "mkarchroot", "--detach-sign", '["makechrootpkg", "--help"]'):
     if forbidden in host_probe:
         fail("A15 canonical UTS probe must remain non-root/non-signing: " + forbidden)
 

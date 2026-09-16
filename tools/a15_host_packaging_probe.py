@@ -66,10 +66,12 @@ def main() -> int:
     run(["makepkg", "--verifysource"], stage)
     namcap_output = run(["namcap", "PKGBUILD"], stage)
     (stage / "namcap-pkgbuild.txt").write_text(namcap_output, encoding="utf-8")
+    namcap_errors = [line for line in namcap_output.splitlines() if " E: " in f" {line} "]
+    if namcap_errors:
+        fail("namcap PKGBUILD errors:\n" + "\n".join(namcap_errors))
     run(["desktop-file-validate", "p2pkanban.desktop"], stage)
-    run(["makechrootpkg", "--help"], stage)
-    run(["repo-add", "--help"], stage)
-    run(["gpg", "--version"], stage)
+    # Arch devtools makechrootpkg intentionally uses short -h, not GNU --help.
+    run(["makechrootpkg", "-h"], stage)
 
     package_list = run(["makepkg", "--packagelist"], stage).strip().splitlines()
     if len(package_list) != 1 or not package_list[0].endswith("p2pkanban-0.1.0-1-x86_64.pkg.tar.zst"):
@@ -107,8 +109,8 @@ def main() -> int:
         "cleanChrootExecuted": False,
         "realSigningKeyUsed": False,
         "notes": [
-            "makepkg source verification, PKGBUILD namcap and desktop-file validation passed non-root.",
-            "makechrootpkg/repo-add/GPG command availability was verified without host mutation.",
+            "makepkg source verification, fail-closed PKGBUILD namcap and desktop-file validation passed non-root.",
+            "makechrootpkg -h completed and repo-add/GPG availability was verified through the required-command PATH gate without host mutation.",
             "Clean-chroot build, package namcap, pacman Qkk/remove preservation and real release-key signing remain manual A15 evidence.",
         ],
     }

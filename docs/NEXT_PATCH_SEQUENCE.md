@@ -51,6 +51,8 @@ A14 adds one explicit, short-lived LAN compatibility listener for device-link/po
 
 A15 introduces a pacman-owned Arch x86_64 packaging/release boundary without changing the application runtime, schema or protocol surface. A deterministic release-preparation tool binds the canonical UTS Cargo.lock into the retained source archive, resolves an exact PKGBUILD source checksum, and records lock/npm/migration/protocol digests. The package owns only `/usr/bin` plus desktop/icon/license metadata; no install/remove hook touches XDG data, keyrings, services or package-manager configuration.
 
+CORR-A15-001 corrects the Arch host-preflight discovered by canonical UTS: `makechrootpkg` uses `-h` rather than unsupported `--help`, and PKGBUILD namcap diagnostics are now fail-closed with an explicit non-routable project URL placeholder.
+
 Package-level `x-scheme-handler/p2pkanban` registration now routes `%u` to the A13 validated argv/single-instance path. Repository staging signs package and pacman DB through an external GPG fingerprint/agent and retains hashes/fingerprint metadata; no private signing material enters the repository. Public AUR/mirror publication remains blocked until the owner supplies a software license. Clean-chroot/package namcap/pacman-Qkk/uninstall and real-key publication remain explicit A15 release evidence.
 
 After A15 acceptance, the next stage is **A16 — backup/doctor/safe-mode/recovery**.

@@ -5,6 +5,7 @@ pkgname=p2pkanban
 pkgver=0.1.0
 pkgrel=1
 pkgdesc='Local-first peer-to-peer Kanban desktop client'
+url='https://example.invalid/p2pkanban'
 arch=('x86_64')
 license=('custom')
 depends=(

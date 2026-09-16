@@ -231,3 +231,7 @@ The project snapshot supplied to A15 contains no software license. A15 must not 
 ### DEBT-A15-003 — clean-chroot/install/signing evidence changes host or uses release secrets
 
 The canonical UTS can non-root verify release-source binding, `makepkg --verifysource`, `namcap PKGBUILD`, desktop metadata and availability of Arch packaging/signing tools. A real clean chroot requires host package/build infrastructure; pacman install/remove changes package state; official repository signing requires the external release private key. These remain named manual/release evidence and are never emulated with a committed test private key or hidden sudo invocation.
+
+### CORR-A15-001 — Arch packaging host-preflight option/lint correction
+
+Canonical A15 UTS on the target Arch-like host proved the packaging commands were installed but exposed two acceptance defects: `makechrootpkg` rejects GNU-style `--help` and documents the short `-h` option, while `namcap PKGBUILD` can emit `E:` diagnostics and still return success. The host probe now uses `makechrootpkg -h`, treats namcap `E:` lines as failure, and the bootstrap PKGBUILD carries a non-routable `https://example.invalid/p2pkanban` metadata URL. This correction changes only packaging acceptance/metadata; runtime, schema, protocol and release-key boundaries remain unchanged. Public publication is still blocked until project-owned origins and an approved software license replace placeholders.

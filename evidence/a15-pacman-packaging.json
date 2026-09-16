@@ -40,7 +40,7 @@
   "sources": [
     {
       "path": "packaging/arch/PKGBUILD",
-      "sha256": "4d6fc83bd840fc9dd13843f3f5fe2937832801764fc2c94dbbfe4511008a1657"
+      "sha256": "6970bdc4fb1da8ef2ce415778dd0baeab053f09bc13ae7be01c2a61fb719a485"
     },
     {
       "path": "packaging/arch/p2pkanban.desktop",
@@ -64,11 +64,11 @@
     },
     {
       "path": "tools/a15_host_packaging_probe.py",
-      "sha256": "b1760d0ecc1cafbf6ba592c3bfe6e388f6bb7628d38eafcfe769eaa224d68571"
+      "sha256": "4cbc16bf8188998123571e2fe060e242e044d1578a595445ec9bf915ad8517a0"
     },
     {
       "path": "docs/evidence/A15_PACMAN_PACKAGING.md",
-      "sha256": "1099f0fa773496768bee381d34155509e614d7aa483a908c5f490389810a4196"
+      "sha256": "6d66df5ee45901717309adf1cb81cca3fbc5aa1b4ac92c053d099d420e3ee94f"
     },
     {
       "path": "docs/architecture/adr/ADR-003-packaging-update-and-rollback.md",
