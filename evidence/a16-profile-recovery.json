@@ -41,7 +41,7 @@
     },
     {
       "path": "src-tauri/src/infrastructure/sqlite/recovery.rs",
-      "sha256": "4d76977d5657f7a5f82eb3825bb2cc285f4df97fec2baf73440de4e089c0a559"
+      "sha256": "54655a9460eec01638066fd27db35bdd7978f0fcbf4b82e77036cc93f69ec332"
     },
     {
       "path": "src-tauri/src/infrastructure/sqlite/mod.rs",

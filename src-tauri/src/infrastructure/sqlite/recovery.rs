@@ -1230,14 +1230,49 @@ mod tests {
         layout.prepare().unwrap();
         {
             let conn = Connection::open(layout.database()).unwrap();
-            for migration in [
-                include_str!("../../../migrations/0001_initial.sql"),
-                include_str!("../../../migrations/0002_workspace_board_titles.sql"),
-                include_str!("../../../migrations/0003_planner_slice.sql"),
-                include_str!("../../../migrations/0004_sync_core.sql"),
-                include_str!("../../../migrations/0005_import_link.sql"),
-            ] {
+            conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+            let historical = [
+                (
+                    include_str!("../../../migrations/0001_initial.sql"),
+                    MIGRATION_V0_TO_V1_ID,
+                    MIGRATION_V0_TO_V1_SHA256,
+                ),
+                (
+                    include_str!("../../../migrations/0002_workspace_board_titles.sql"),
+                    MIGRATION_V1_TO_V2_ID,
+                    MIGRATION_V1_TO_V2_SHA256,
+                ),
+                (
+                    include_str!("../../../migrations/0003_planner_slice.sql"),
+                    MIGRATION_V2_TO_V3_ID,
+                    MIGRATION_V2_TO_V3_SHA256,
+                ),
+                (
+                    include_str!("../../../migrations/0004_sync_core.sql"),
+                    MIGRATION_V3_TO_V4_ID,
+                    MIGRATION_V3_TO_V4_SHA256,
+                ),
+                (
+                    include_str!("../../../migrations/0005_import_link.sql"),
+                    MIGRATION_V4_TO_V5_ID,
+                    MIGRATION_V4_TO_V5_SHA256,
+                ),
+            ];
+            for (index, (migration, id, checksum)) in historical.into_iter().enumerate() {
                 conn.execute_batch(migration).unwrap();
+                let applied_at = i64::try_from(index + 1).unwrap();
+                if index == 0 {
+                    conn.execute(
+                        "UPDATE profile_meta SET created_at_unix_ms=?1 WHERE singleton=1",
+                        [applied_at],
+                    )
+                    .unwrap();
+                }
+                conn.execute(
+                    "INSERT INTO schema_migrations(id, checksum, applied_at_unix_ms) VALUES (?1, ?2, ?3)",
+                    rusqlite::params![id, checksum, applied_at],
+                )
+                .unwrap();
             }
             conn.execute(
                 "INSERT INTO workspaces(id, access_epoch, title) VALUES ('w-old', '1', 'old schema')",
@@ -1246,13 +1281,47 @@ mod tests {
             .unwrap();
         }
         fs::set_permissions(layout.database(), fs::Permissions::from_mode(0o600)).unwrap();
+        let before_snapshot_sha256 = sha256_file(layout.database()).unwrap();
         let backend = SqliteRecoveryBackend::new(layout.clone());
+        let doctor_before = backend.doctor().unwrap();
+        assert!(!doctor_before.safe_mode_required);
+        assert_eq!(doctor_before.schema_version, Some(5));
+
         let snapshot = backend
             .create_pre_migration_backup()
             .unwrap()
             .expect("old schema must receive a verified snapshot");
         assert_eq!(snapshot.schema_version, 5);
         assert!(snapshot.backup_id.starts_with("pre-migration-v5-to-v6-"));
+        assert_eq!(sha256_file(layout.database()).unwrap(), before_snapshot_sha256);
+        let verified_before = verify_restore_point(&layout, &snapshot.backup_id).unwrap();
+        assert_eq!(verified_before.schema_version, 5);
+
+        let (migrated, info) = open_profile(&layout).unwrap();
+        assert_eq!(info.schema_version, CURRENT_SCHEMA_VERSION);
+        let title: String = migrated
+            .query_row(
+                "SELECT title FROM workspaces WHERE id='w-old'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(title, "old schema");
+        drop(migrated);
+
+        let verified_after = verify_restore_point(&layout, &snapshot.backup_id).unwrap();
+        assert_eq!(verified_after.schema_version, 5);
+        let backup_path = database_path(&layout, &snapshot.backup_id).unwrap();
+        let backup_conn = open_read_only(&backup_path).unwrap();
+        let backup_title: String = backup_conn
+            .query_row(
+                "SELECT title FROM workspaces WHERE id='w-old'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(backup_title, "old schema");
+
         let listed = backend.list_backups().unwrap();
         assert!(listed
             .iter()
