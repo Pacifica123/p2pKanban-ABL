@@ -2,6 +2,7 @@ pub mod import;
 pub mod integration;
 pub mod parity;
 pub mod planner;
+pub mod recovery;
 pub mod repository;
 pub mod system;
 pub mod sync;

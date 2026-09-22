@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "stage": "A15",
-  "description": "Canonical UserTestSpace verification through A15. A15 adds pacman-owned Arch x86_64 packaging/release inputs: deterministic source archive binding the canonical Cargo.lock, exact-checksum PKGBUILD staging, package-owned desktop/deep-link registration, non-root makepkg/namcap/desktop validation and external-key signed-repository tooling. Application runtime/schema/protocol behavior is unchanged; no self-updater, sudo/pacman invocation, install/remove data hook, system service or private signing material is introduced.",
+  "stage": "A16",
+  "description": "Canonical UserTestSpace verification through A16. A16 adds a native/CLI recovery plane before WebView startup: read-only doctor/preflight, verified connection-level profile backups with hash/integrity/count manifests, a verified pre-migration restore point before any old-schema writable open, explicit safe mode and logical salvage export, and confirmed restore that quarantines the replaced profile. Recovery holds the profile flock without binding the graphical activation socket and does not start LAN/relay/WebView/update activity. Schema/protocol/CSP remain unchanged at v6.",
   "deterministic": [
     {
       "id": "a00",
@@ -201,6 +201,14 @@
         "python3",
         "-B",
         "tools/check_a15.py"
+      ]
+    },
+    {
+      "id": "a16",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_a16.py"
       ]
     }
   ],
@@ -446,6 +454,30 @@
           "--report",
           "{report_dir}/a15-packaging.json"
         ]
+      },
+      {
+        "id": "a16-rust-recovery",
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "src-tauri/Cargo.toml",
+          "--locked",
+          "--offline",
+          "a16_",
+          "--",
+          "--nocapture"
+        ]
+      },
+      {
+        "id": "a16-host-recovery",
+        "command": [
+          "python3",
+          "-B",
+          "tools/a16_host_recovery_probe.py",
+          "--report",
+          "{report_dir}/a16-recovery.json"
+        ]
       }
     ]
   },
@@ -485,6 +517,11 @@
     "A15 uninstall preservation: after creating representative profile/config/state/cache data and durable SecretVault entries, pacman -R p2pkanban must remove package-owned /usr files without deleting those user-owned XDG/keyring records.",
     "A15 signing/repository: use a project release key held outside the repository; verify package and repository DB signatures, retain release-manifest.json/key fingerprint, and publish only to project-controlled HTTPS mirrors after replacing example.invalid origins.",
     "A15 licensing: public AUR/public-mirror publication remains blocked until the rights holder replaces the packaging notice with an approved software license.",
-    "A15 rollback: package downgrade alone is not claimed as profile/database rollback; A16 owns backup/doctor/safe-mode recovery and schema-aware rollback evidence."
+    "A15 rollback: package downgrade alone is not claimed as profile/database rollback; A16 owns backup/doctor/safe-mode recovery and schema-aware rollback evidence.",
+    "A16 CLI recovery: with the GUI closed, `p2pkanban doctor` and `p2pkanban safe-mode` must run without starting WebView, relay/Iroh/LAN transport, update activity or an activation socket.",
+    "A16 backup/restore: create representative planner state, run `p2pkanban backup`, mutate it, confirm restore without `--yes` is refused, then restore the verified point with `--yes` and confirm the original state returns.",
+    "A16 migration recovery: on a copy of an older supported schema, normal startup must create a verified A16 pre-migration restore point before the existing migration engine obtains a writable migrated profile.",
+    "A16 logical salvage: `p2pkanban safe-export <path.json>` is a user-private recovery artifact containing planner content only; it is not `p2p_planner_bundle` and intentionally omits session/capability/sync operational state.",
+    "A16 failure containment: corrupt/tampered profile, manifest, backup or interrupted migration journal must enter/refuse through safe recovery paths without deleting the current profile; replaced state is quarantined during confirmed restore."
   ]
 }

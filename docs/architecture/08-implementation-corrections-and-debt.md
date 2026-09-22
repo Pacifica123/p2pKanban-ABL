@@ -243,3 +243,33 @@ Canonical A15 UTS on the target Arch-like host proved the packaging commands wer
 **Status:** corrected inside A15; no A15b stage.
 
 The target Arch `makechrootpkg -h` prints the expected usage/flags surface but exits non-zero. CORR-A15-001 corrected the option spelling but still routed the help probe through the generic `run()` helper, incorrectly treating the tool's help exit status as a capability failure. A15 now proves executable presence with the existing `shutil.which` gate and treats `-h` only as a textual sanity-check: output must contain `Usage: makechrootpkg` and `Flags:` regardless of the help command exit code. This preserves fail-closed detection of a wrong/unexpected executable without imposing GNU-style help exit semantics on Arch devtools.
+
+## A16 — verified profile recovery boundary
+
+A16 adds recovery without widening the WebView privilege surface or changing schema/protocol contracts. The normal startup path performs a read-only doctor while it already owns the profile writer flock; if an older supported schema is healthy, A16 creates a verified connection-level pre-migration profile snapshot before any repository performs the existing writable migration. The A05 migration engine and its transaction-local rollback artifact remain unchanged.
+
+CLI recovery uses a separate native flock guard on the same profile directory, deliberately without binding or routing through the A06/A13 graphical activation socket. `doctor`, `backups`, `safe-mode`, `safe-export` and confirmed `restore` therefore remain usable without constructing the WebView or starting A14 LAN compatibility transport. Restore verifies the immutable snapshot manifest/hash/integrity first, preserves a healthy pre-restore point when possible, quarantines the replaced DB/WAL/SHM/journal, atomically installs the verified snapshot, then rechecks integrity and hash.
+
+### DEBT-A16-001 — canonical Rust/real-binary acceptance is host-owned
+
+**Classification:** [FACT] from the patch-construction environment.
+**Architecture impact:** evidence only; recovery semantics are implemented in source.
+**Status:** open until canonical A16 UTS passes.
+
+The construction environment used for this patch has Python/Node but no `cargo`, `rustc` or `rustfmt`. It can execute deterministic source/contracts but cannot truthfully claim Rust compilation or the real-binary recovery drill. Canonical UTS therefore adds both `cargo test ... a16_` and `tools/a16_host_recovery_probe.py`; a failed compile/probe reopens A16.
+
+### DEBT-A16-002 — recovery logical export is salvage, not a new interchange contract
+
+**Classification:** [PROPOSAL implemented with an explicit compatibility boundary].
+**Architecture impact:** export/recovery semantics; A11 public portable format remains unchanged.
+**Status:** intentional boundary.
+
+`p2pkanban safe-export` emits `p2pkanban-recovery-logical` v1 containing known planner-content tables that can be read safely from an integrity-valid profile. It intentionally excludes profile principal/capability/import receipts, sync outbox/seen/field-version state, pending mutation markers and schema bookkeeping. It is not advertised as `p2p_planner_bundle`, is not directly importable, and does not supersede A11 portable interoperability. Its purpose is human/support salvage when the normal UI/runtime path is unavailable.
+
+### DEBT-A16-003 — runtime/package repair remains non-privileged
+
+**Classification:** [ARCHITECTURE constraint].
+**Architecture impact:** safe-mode scope.
+**Status:** bounded/open for later release diagnostics.
+
+A16 does not run `pacman`, `sudo`, `pkexec`, download replacement WebKit libraries or disable signature/TLS checks. A healthy `p2pkanban doctor` result separates profile health from a later WebView/runtime failure, but a loader failure that prevents the executable itself from entering `main` necessarily remains a package-manager/runtime-support problem. A17/A18 may improve offline runtime diagnostics; they must not turn recovery into a self-updater or privileged repair agent.

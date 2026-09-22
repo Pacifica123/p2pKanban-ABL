@@ -4,10 +4,11 @@ mod domain;
 mod infrastructure;
 mod navigation_policy;
 
-use std::{io::Write as _, net::Ipv4Addr, sync::Arc, time::Duration};
+use std::{io::Write as _, net::Ipv4Addr, path::PathBuf, sync::Arc, time::Duration};
 
 use application::{
     import::ImportService,
+    recovery::RecoveryService,
     integration::{IntegrationAdapter, IntegrationService},
     lan_bridge::{LanBridgePayloadHandler, LanBridgeRuntime, LanBridgeService},
     parity::{ParityService, RandomParityIds},
@@ -19,12 +20,14 @@ use infrastructure::{
         instance::{self, InstanceRole, SecondaryInstance, ACTIVATE_MAIN_V1, MAX_ACTIVATION_PAYLOAD_BYTES},
         integration::LinuxIntegrationAdapter,
         lan_bridge::LinuxLanBridgeRuntime,
+        recovery_lock,
         secrets::bootstrap_vault,
         xdg::{DesktopPaths, XdgEnvironment},
     },
     sqlite::{
         import::SqliteImportRepository, parity::SqliteParityRepository,
-        repository::SqlitePlannerRepository, workspace::SqliteWorkspaceCatalog,
+        repository::SqlitePlannerRepository, recovery::SqliteRecoveryBackend,
+        workspace::SqliteWorkspaceCatalog,
     },
 };
 use crate::domain::{
@@ -36,6 +39,198 @@ use tauri::{
     Manager, WebviewUrl,
 };
 
+
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RecoveryCliCommand {
+    Doctor { json: bool },
+    Backup { json: bool },
+    Backups { json: bool },
+    SafeMode { json: bool },
+    SafeExport { destination: PathBuf, overwrite: bool, json: bool },
+    Restore { backup_id: String, confirmed: bool, json: bool },
+}
+
+fn parse_recovery_cli(args: &[String]) -> Result<Option<RecoveryCliCommand>, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Ok(None);
+    };
+    let only_json = |rest: &[String]| -> Result<bool, String> {
+        if rest.is_empty() {
+            return Ok(false);
+        }
+        if rest.len() == 1 && rest[0] == "--json" {
+            return Ok(true);
+        }
+        Err("recovery command accepts only optional --json".to_owned())
+    };
+    match command {
+        "doctor" => Ok(Some(RecoveryCliCommand::Doctor { json: only_json(&args[1..])? })),
+        "backup" => Ok(Some(RecoveryCliCommand::Backup { json: only_json(&args[1..])? })),
+        "backups" => Ok(Some(RecoveryCliCommand::Backups { json: only_json(&args[1..])? })),
+        "safe-mode" => Ok(Some(RecoveryCliCommand::SafeMode { json: only_json(&args[1..])? })),
+        "safe-export" => {
+            let destination = args
+                .get(1)
+                .ok_or_else(|| "safe-export requires a destination path".to_owned())?;
+            let mut overwrite = false;
+            let mut json = false;
+            for option in &args[2..] {
+                match option.as_str() {
+                    "--force" => overwrite = true,
+                    "--json" => json = true,
+                    _ => return Err(format!("unsupported safe-export option: {option}")),
+                }
+            }
+            Ok(Some(RecoveryCliCommand::SafeExport {
+                destination: PathBuf::from(destination),
+                overwrite,
+                json,
+            }))
+        }
+        "restore" => {
+            let backup_id = args.get(1).ok_or_else(|| "restore requires a backup id".to_owned())?;
+            let mut confirmed = false;
+            let mut json = false;
+            for option in &args[2..] {
+                match option.as_str() {
+                    "--yes" => confirmed = true,
+                    "--json" => json = true,
+                    _ => return Err(format!("unsupported restore option: {option}")),
+                }
+            }
+            Ok(Some(RecoveryCliCommand::Restore {
+                backup_id: backup_id.clone(),
+                confirmed,
+                json,
+            }))
+        }
+        _ => Ok(None),
+    }
+}
+
+fn print_doctor_human(report: &crate::domain::recovery::DoctorReport) {
+    println!("p2pKanban doctor");
+    println!("profile: {}", report.profile_database);
+    println!("safe mode required: {}", report.safe_mode_required);
+    if let Some(schema) = report.schema_version {
+        println!("schema: {schema}");
+    }
+    for check in &report.checks {
+        println!("- {:?} {}: {}", check.level, check.id, check.message);
+    }
+}
+
+fn run_recovery_cli(
+    command: RecoveryCliCommand,
+    prepared: &infrastructure::linux::xdg::PreparedDesktopPaths,
+) -> Result<(), String> {
+    let _exclusive = recovery_lock::acquire(prepared)
+        .map_err(|err| format!("unable to acquire recovery profile lock: {err:?}"))?
+        .ok_or_else(|| "profile is currently owned by another p2pKanban process; close it before recovery".to_owned())?;
+    let service = RecoveryService::new(Box::new(SqliteRecoveryBackend::new(
+        prepared.paths.profile.clone(),
+    )));
+
+    match command {
+        RecoveryCliCommand::Doctor { json } => {
+            let report = service.doctor().map_err(|err| format!("doctor failed: {err:?}"))?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report).map_err(|err| err.to_string())?);
+            } else {
+                print_doctor_human(&report);
+            }
+        }
+        RecoveryCliCommand::Backup { json } => {
+            let manifest = service
+                .create_manual_backup()
+                .map_err(|err| format!("backup failed: {err:?}"))?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&manifest).map_err(|err| err.to_string())?);
+            } else {
+                println!("verified backup created: {}", manifest.backup_id);
+                println!("sha256: {}", manifest.database_sha256);
+            }
+        }
+        RecoveryCliCommand::Backups { json } => {
+            let backups = service.list_backups().map_err(|err| format!("backup listing failed: {err:?}"))?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&backups).map_err(|err| err.to_string())?);
+            } else if backups.is_empty() {
+                println!("no restore points found");
+            } else {
+                for backup in backups {
+                    println!(
+                        "{} verified={} schema={:?} reason={}",
+                        backup.backup_id,
+                        backup.verified,
+                        backup.schema_version,
+                        backup.reason.unwrap_or_else(|| "unknown".to_owned())
+                    );
+                }
+            }
+        }
+        RecoveryCliCommand::SafeMode { json } => {
+            let doctor = service.doctor().map_err(|err| format!("safe-mode doctor failed: {err:?}"))?;
+            let backups = service.list_backups().map_err(|err| format!("safe-mode backup listing failed: {err:?}"))?;
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "mode": "safe-mode",
+                        "networkEnabled": false,
+                        "webviewStarted": false,
+                        "migrationsEnabled": false,
+                        "doctor": doctor,
+                        "backups": backups,
+                    }))
+                    .map_err(|err| err.to_string())?
+                );
+            } else {
+                println!("p2pKanban SAFE MODE (CLI/native recovery plane)");
+                println!("network: disabled; WebView: not started; automatic migrations: disabled");
+                print_doctor_human(&doctor);
+                println!("verified restore points:");
+                for backup in backups.into_iter().filter(|backup| backup.verified) {
+                    println!("- {} ({})", backup.backup_id, backup.reason.unwrap_or_else(|| "unknown".to_owned()));
+                }
+                println!("logical planner export: p2pkanban safe-export <path.json>");
+                println!("restore with: p2pkanban restore <backup-id> --yes");
+            }
+        }
+        RecoveryCliCommand::SafeExport { destination, overwrite, json } => {
+            let report = service
+                .export_logical(&destination, overwrite)
+                .map_err(|err| format!("safe logical export failed: {err:?}"))?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report).map_err(|err| err.to_string())?);
+            } else {
+                println!("logical recovery export written: {}", report.path);
+                println!("sha256: {}", report.sha256);
+                println!("rows: {} across {} table(s)", report.row_count, report.table_count);
+                println!("note: this is a recovery/salvage artifact, not p2p_planner_bundle v1");
+            }
+        }
+        RecoveryCliCommand::Restore { backup_id, confirmed, json } => {
+            if !confirmed {
+                return Err("restore is destructive; rerun with --yes after reviewing `p2pkanban backups`".to_owned());
+            }
+            let report = service
+                .restore(&backup_id)
+                .map_err(|err| format!("restore failed: {err:?}"))?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report).map_err(|err| err.to_string())?);
+            } else {
+                println!("restored verified backup: {}", report.backup_id);
+                println!("schema: {}", report.restored_schema_version);
+                if let Some(path) = report.quarantine_path {
+                    println!("previous profile quarantined at: {path}");
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
 fn startup_deep_link() -> Result<Option<DeepLinkIntent>, String> {
     let mut found = None;
@@ -138,12 +333,17 @@ fn print_integration_probe(prepared: &infrastructure::linux::xdg::PreparedDeskto
 }
 
 fn run() -> Result<(), String> {
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+    let recovery_command = parse_recovery_cli(&args)?;
     let startup_deep_link = startup_deep_link()?;
     let prepared = DesktopPaths::resolve(&XdgEnvironment::current(), "default")
         .map_err(|err| format!("unable to resolve XDG profile paths: {err:?}"))?
         .prepare()
         .map_err(|err| format!("unable to prepare XDG profile paths: {err:?}"))?;
 
+    if let Some(command) = recovery_command {
+        return run_recovery_cli(command, &prepared);
+    }
     if integration_probe_requested() {
         print_integration_probe(&prepared);
         return Ok(());
@@ -175,6 +375,26 @@ fn run() -> Result<(), String> {
             return Ok(());
         }
     };
+
+    let recovery_preflight = RecoveryService::new(Box::new(SqliteRecoveryBackend::new(
+        prepared.paths.profile.clone(),
+    )));
+    let recovery_report = recovery_preflight
+        .doctor()
+        .map_err(|err| format!("profile recovery preflight failed: {err:?}"))?;
+    if recovery_report.safe_mode_required {
+        print_doctor_human(&recovery_report);
+        return Err("profile requires recovery; run `p2pkanban safe-mode` before normal startup".to_owned());
+    }
+    if let Some(snapshot) = recovery_preflight
+        .create_pre_migration_backup()
+        .map_err(|err| format!("unable to create verified pre-migration recovery point: {err:?}"))?
+    {
+        eprintln!(
+            "p2pKanban recovery: verified pre-migration snapshot {} created before schema write",
+            snapshot.backup_id
+        );
+    }
 
     let workspace_repository = SqliteWorkspaceCatalog::open(&prepared.paths.profile)
         .map_err(|err| format!("unable to open durable workspace catalog: {err:?}"))?;
@@ -311,6 +531,45 @@ fn run() -> Result<(), String> {
         })
         .run(tauri::generate_context!())
         .map_err(|err| format!("failed to run p2pKanban Arch-native shell: {err}"))
+}
+
+
+#[cfg(test)]
+mod a16_cli_tests {
+    use super::*;
+
+    fn args(items: &[&str]) -> Vec<String> {
+        items.iter().map(|item| (*item).to_owned()).collect()
+    }
+
+    #[test]
+    fn a16_recovery_cli_is_explicit_and_restore_requires_confirmation() {
+        assert_eq!(
+            parse_recovery_cli(&args(&["doctor", "--json"])).unwrap(),
+            Some(RecoveryCliCommand::Doctor { json: true })
+        );
+        assert_eq!(
+            parse_recovery_cli(&args(&["safe-mode"])).unwrap(),
+            Some(RecoveryCliCommand::SafeMode { json: false })
+        );
+        assert_eq!(
+            parse_recovery_cli(&args(&["restore", "manual-1"])).unwrap(),
+            Some(RecoveryCliCommand::Restore {
+                backup_id: "manual-1".to_owned(),
+                confirmed: false,
+                json: false,
+            })
+        );
+        assert_eq!(
+            parse_recovery_cli(&args(&["safe-export", "/tmp/recovery.json", "--force", "--json"])).unwrap(),
+            Some(RecoveryCliCommand::SafeExport {
+                destination: PathBuf::from("/tmp/recovery.json"),
+                overwrite: true,
+                json: true,
+            })
+        );
+        assert!(parse_recovery_cli(&args(&["backup", "--unknown"])).is_err());
+    }
 }
 
 fn main() {

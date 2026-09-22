@@ -230,8 +230,13 @@ with tempfile.TemporaryDirectory(prefix="p2pkanban-a15-") as td:
         fail("release source/PKGBUILD staging is not deterministic")
 
 plan = load("tools/uts_plan.json")
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A15":
-    fail("UTS plan did not advance to A15")
+stage = plan.get("stage")
+try:
+    stage_number = int(str(stage).removeprefix("A"))
+except ValueError:
+    stage_number = -1
+if plan.get("schemaVersion") != 1 or not str(stage).startswith("A") or stage_number < 15:
+    fail("UTS plan regressed before A15")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 if not {"a14", "a15"}.issubset(ids) or ids.index("a14") >= ids.index("a15"):
     fail("A15 deterministic gate missing/not ordered after A14")
