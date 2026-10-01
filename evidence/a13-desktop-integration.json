@@ -91,11 +91,11 @@
     },
     {
       "path": "tools/check_a13.py",
-      "sha256": "d9539273a5e3c7d6fd30ae097b867dcf5c2aba8dfde7f917c045c132aa76cc01"
+      "sha256": "ed5998046c68b1792559660b4ad788fa08f9e58ae7143bffcd51f6f86cbe8fd8"
     },
     {
       "path": "tools/uts_plan.json",
-      "sha256": "466a243966ea25b8550ffcb4ecf7845f136d0690e729618139b1910b034f9194"
+      "sha256": "29b051f4a0e0e0f9c0abd58995931af1cc24e55f4f7ed5dec4d1f05e006f7aae"
     },
     {
       "path": "docs/evidence/A13_DESKTOP_INTEGRATION.md",
@@ -107,11 +107,11 @@
     },
     {
       "path": "docs/IMPLEMENTATION_STATUS.md",
-      "sha256": "914942e904f37eaf717ac35829cd621d4981d5e8f310b621e3e42b833dad0c53"
+      "sha256": "d61eaa6bf218bf7b9af9634ef64d7df53a312e86bca48bf4ddf3c0b5ac8b17b7"
     },
     {
       "path": "docs/NEXT_PATCH_SEQUENCE.md",
-      "sha256": "5e062d13ba8035ac01cd00bf5b37ec7c0242db9794856d6c9b67ecb195850dc7"
+      "sha256": "b8ebfa54090b86e8e562e9861a53209b8df0b49f4e2e8adad493c1830405ef4d"
     }
   ]
 }

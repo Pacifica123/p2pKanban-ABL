@@ -107,7 +107,7 @@
     },
     {
       "path": "tools/uts_plan.json",
-      "sha256": "b75927753c841af27c3e2aaaefc61947033d665643ddd233fee749f8698b9d46"
+      "sha256": "29b051f4a0e0e0f9c0abd58995931af1cc24e55f4f7ed5dec4d1f05e006f7aae"
     },
     {
       "path": "docs/evidence/A12_PARITY_SURFACE.md",
@@ -123,7 +123,7 @@
     },
     {
       "path": "docs/IMPLEMENTATION_STATUS.md",
-      "sha256": "b4cc55fa8da395680b3bfe73d37629bacefb9b2cd1da6797968ecb135cb95386"
+      "sha256": "d61eaa6bf218bf7b9af9634ef64d7df53a312e86bca48bf4ddf3c0b5ac8b17b7"
     }
   ]
 }

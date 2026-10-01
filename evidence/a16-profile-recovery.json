@@ -65,11 +65,11 @@
     },
     {
       "path": "tools/check_a16.py",
-      "sha256": "234cdb98268a5d7ddbc7ab8184ce04573be9d5984496db5b165db69e7e90e6f6"
+      "sha256": "cc8798a50840f2f89ce15cbaf33d735c440cf69c3d4cf79bf1ef66386df14493"
     },
     {
       "path": "tools/uts_plan.json",
-      "sha256": "f5daf0cbb5cefcb8996e813743024307ed83d33ceff8b76a3f7e0589f12c5ffe"
+      "sha256": "29b051f4a0e0e0f9c0abd58995931af1cc24e55f4f7ed5dec4d1f05e006f7aae"
     },
     {
       "path": "docs/A16_RECOVERY.md",
@@ -81,11 +81,11 @@
     },
     {
       "path": "docs/IMPLEMENTATION_STATUS.md",
-      "sha256": "1b41d12b55019b244b9db7f44f3736c7bb81b44fdd4b9e5924ee8867c72b5b4e"
+      "sha256": "d61eaa6bf218bf7b9af9634ef64d7df53a312e86bca48bf4ddf3c0b5ac8b17b7"
     },
     {
       "path": "docs/NEXT_PATCH_SEQUENCE.md",
-      "sha256": "133482917467c7f79ccb9fb72f852afa047411721b9a6973ed5f72f4f07aae14"
+      "sha256": "b8ebfa54090b86e8e562e9861a53209b8df0b49f4e2e8adad493c1830405ef4d"
     },
     {
       "path": "docs/architecture/08-implementation-corrections-and-debt.md",

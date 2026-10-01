@@ -210,7 +210,7 @@ for forbidden in ("sudo", "pacman -S", "pkexec", "curl", "wget", "requests"):
         fail("A16 host probe performs forbidden bootstrap/privileged behavior: " + forbidden)
 
 plan = load("tools/uts_plan.json")
-if plan.get("schemaVersion") != 1 or plan.get("stage") != "A16":
+if plan.get("schemaVersion") != 1 or int(str(plan.get("stage", "A0")).removeprefix("A")) < 16:
     fail("UTS plan did not advance to A16")
 ids = [item.get("id") for item in plan.get("deterministic", [])]
 if not {"a15", "a16"}.issubset(ids) or ids.index("a15") >= ids.index("a16"):

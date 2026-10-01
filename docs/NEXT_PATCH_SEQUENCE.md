@@ -62,3 +62,10 @@ A16 adds read-only startup doctor/preflight, verified Online Backup API restore 
 After A16 acceptance, the next stage is **A17 — AppImage fallback + offline release kit**.
 
 CORR-A15-002 corrects the remaining Arch devtools preflight semantic: `makechrootpkg -h` is accepted by expected help markers even when that help path returns non-zero; executable presence remains separately fail-closed via PATH discovery.
+
+
+## A17 implemented boundary
+
+A17 adds the optional AppImage packaging overlay, immutable A15-source build wrapper and externally signed offline release kit. The verifier pins a separately trusted full primary fingerprint, expected version and minimum release sequence, checks every file, then supports explicit private extract/run without FUSE. It preserves the A16 XDG/flock/schema recovery boundary and never alters pacman state. Real compiled AppImage FUSE/extract, GUI/offline and distribution baseline evidence remains pending; synthetic signature tests do not close that acceptance gate.
+
+Next architecture implementation: **A18 — performance/power/rolling-release hardening** after A17 real-host acceptance.

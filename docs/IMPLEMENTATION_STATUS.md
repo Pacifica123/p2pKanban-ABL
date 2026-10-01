@@ -32,7 +32,7 @@ This ledger is normative for claims about the Arch-native repository. `implement
 | ADR-003 pacman-owned packaging/update; AppImage fallback | `packaging/arch/**`, A15 release/source/signing tooling | **accepted and implemented through pacman-owned A15 boundary; host/release acceptance pending** | A15 |
 | A15 PKGBUILD + signed-repo packaging | `packaging/arch/**`, deterministic release source, signed-repo staging, package host probe, `tools/check_a15.py` | **implemented at source/deterministic level; CORR-A15-001/002 fix Arch host-preflight option/lint/help-exit handling; canonical packaging UTS + clean-chroot/release evidence pending** | A16 |
 | A16 backup/doctor/safe-mode/recovery | `domain/application/recovery`, SQLite recovery adapter, native recovery flock, CLI doctor/backup/safe-mode/safe-export/restore, A16 host probe | **implemented at source/deterministic level; canonical Cargo + real-binary recovery UTS pending** | A17 |
-| A17 AppImage fallback + offline release kit | none yet | **planned** | A17 |
+| A17 AppImage fallback + offline release kit | AppImage overlay, immutable-source build, signed offline-kit stage/verify/run, GPG/tamper gate, explicit real-image host probe | **implemented at source/tooling level; real AppImage FUSE/extract/WebKitGTK release acceptance pending** | A18 |
 | A18 performance/power/rolling-release hardening | no measurements yet | **experiment-needed** | A18 |
 | A19 Iroh / Arch ARM evidence track | no promotion evidence | **experiment-needed** | A19 |
 

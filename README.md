@@ -6,9 +6,9 @@ This repository follows the implementation sequence `A00 … A19` from the accep
 
 ## Current state
 
-A00 is implemented. A01 source/security foundation and A02 typed desktop transport exist. The first real Arch-family UserTestSpace build passed frontend typecheck/build and Cargo lock/fetch, then found a concrete Tauri packaging defect: `src-tauri/icons/icon.png` was missing. **A02b fixes that defect**, explicitly owns the icon, removes the unsupported Node `<23` build-time ceiling, and introduces a persistent one-command UTS verifier.
+A00–A16 code is present. The latest supplied archive includes A16 doctor/backup/safe-mode/recovery; its real-binary host acceptance remains separately recorded. A17 now adds the optional AppImage build channel and signed offline installation/recovery kit. The normal pacman path remains A15.
 
-Post-fix native Cargo/WebView evidence is still verification-pending; it is not represented as green until UTS says so. Exact next architecture patch: **A03 — Rust application/domain boundary**.
+See [A17 offline-kit instructions](docs/A17_OFFLINE_KIT.md) and [A16 recovery](docs/A16_RECOVERY.md). A17 signature/tamper behavior is tested with synthetic artifacts; an actual built AppImage, FUSE/extract launch, WebKitGTK and distribution baseline must pass the explicit release/host gates before a binary is described as supported. Next implementation stage: **A18 — performance/power/rolling-release hardening**.
 
 ## Source layout
 
