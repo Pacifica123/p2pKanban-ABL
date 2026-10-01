@@ -117,6 +117,10 @@ def offline_then_optional_network(
         results.append(first)
         return True
     if not allow_network:
+        if step_id == "cargo.fetch" and first.log and any(token in (report_dir / first.log).read_text() for token in
+            ("no matching package named", "attempting to make an HTTP request", "failed to download")):
+            first.status = "BLOCKED"
+            first.note = "Cargo cache incomplete; run python3 -B tools/uts_verify.py --allow-network once, then rerun offline"
         results.append(first)
         results.append(synthetic(step_id, "BLOCKED", "offline preparation failed; rerun with --allow-network to populate cache explicitly"))
         return False
@@ -162,6 +166,12 @@ def prepare_cargo_lock(
         return True
 
     if not allow_network:
+        # A missing offline cache is an unmet host prerequisite. Preserve the
+        # failing command and log, but distinguish it from a Rust/test defect.
+        if first.log and any(token in (report_dir / first.log).read_text() for token in
+            ("no matching package named", "attempting to make an HTTP request", "failed to download")):
+            first.status = "BLOCKED"
+            first.note = "Cargo cache incomplete; run python3 -B tools/uts_verify.py --allow-network once, then rerun offline"
         results.append(first)
         results.append(synthetic(
             "cargo.lock",
@@ -244,6 +254,12 @@ def write_summary(plan: dict[str, Any], report_dir: Path, results: list[Result],
         detail = f" — {r.note}" if r.note else ""
         log = f" — {r.log}" if r.log else ""
         lines.append(f"[{r.status}] {r.id}{detail}{log}")
+    cache_blocked = any(r.status in {"FAIL","BLOCKED"} and r.id in {"cargo.lock","cargo.fetch.offline","cargo.lock.offline"} for r in results)
+    if cache_blocked and not allow_network:
+        lines += ["", "Cargo preparation required:",
+          "python3 -B tools/uts_verify.py --allow-network",
+          "After one successful cache preparation, rerun: python3 -B tools/uts_verify.py",
+          "Dependent host probes are blocked by preparation; they were not executed."]
     lines += ["", "Manual evidence still required:"]
     for item in plan.get("manualEvidence", []):
         lines.append(f"- {item}")

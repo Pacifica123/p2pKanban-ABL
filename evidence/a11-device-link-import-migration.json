@@ -108,7 +108,7 @@
     },
     {
       "path": "tools/uts_plan.json",
-      "sha256": "29b051f4a0e0e0f9c0abd58995931af1cc24e55f4f7ed5dec4d1f05e006f7aae"
+      "sha256": "da9580c547a43b68449da2450a7eefc3881f32fc3c01eb7754cda7d74cabfa12"
     },
     {
       "path": "docs/evidence/A11_DEVICE_LINK_IMPORT_MIGRATION.md",
@@ -120,7 +120,7 @@
     },
     {
       "path": "tools/uts_verify.py",
-      "sha256": "2258d00229d822d5f9ac321e537bebbd215fbb840f7b5591a0488f35f0a12f0f"
+      "sha256": "b9e215db4b7267ac6ca861ba49c5b0f0035c93cf528ae4b1acb9b8da7e0d718f"
     }
   ],
   "stage": "A11",

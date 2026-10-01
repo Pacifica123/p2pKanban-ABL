@@ -1,11 +1,9 @@
-# A17: AppImage fallback and signed offline installation/recovery kit
+# A17b: real locked Cargo graph and explicit UTS cache recovery
 
-Base: supplied snapshot `e88af2c`.
+Base: supplied snapshot `df2bd70`.
 
-Implements the A17 packaging/recovery channel from the accepted Arch roadmap. Adds an opt-in Tauri AppImage overlay, immutable A15-source build wrapper, release kit staging through an external GPG agent, independently pinned signature/version/replay verification, and private FUSE or explicit extract/run. The kit retains source/lock/package metadata and A16 recovery docs. XDG profile, flock, schema-v6, IPC/CSP and live transport behavior are unchanged.
+Adds a genuine Cargo.lock resolved against unchanged direct pins with Rust 1.90-compatible fallback. UTS reports an incomplete offline Cargo cache as a blocked prerequisite while retaining nonzero verification and original logs; summary gives the exact one-time --allow-network preparation and offline rerun commands. Actual manifest/compiler defects retain FAIL. Adds a deterministic lock/cache regression and updates mutable evidence hashes only for modified repository documents/tools. Frozen external source anchors remain intact.
 
-All inherited A00–A16 offline gates plus A17 are checked. A16 checker now accepts later stages while retaining its recovery assertions; shared evidence hashes are advanced to the new docs/UTS ledger. Test fixture contains public synthetic signed data encoded in JSON, never a delivered binary.
+Input UTS root error: no matching k256 package in the offline cache; allowNetwork=false. Rust build and downstream host probes were not executed in that report. A lockfile does not provide crate archives or GTK/WebKit build dependencies. Local locked network fetch and offline fetch pass; native test attempt is blocked by missing pkg-config/system development dependencies here. Real target-host native tests/build/runtime and AppImage acceptance remain mandatory. This is an A17 correction, not A18 implementation.
 
-Real AppImage bundling, release-agent signing, FUSE/extract/WebKitGTK, distribution ABI and offline GUI acceptance remain explicit host/release gates. A17 does not implement the deferred live ABL relay coordinator. Next implementation is A18 after that acceptance.
-
-Rollback: devctl source rollback; an app/package downgrade alone does not roll back a profile. Use verified A16 backups and explicit restore. No schema or wire-protocol migration.
+After devctl start, run python3 -B tools/uts_verify.py --allow-network once in the project, then python3 -B tools/uts_verify.py. No profile reset/cache deletion/dependency-pin changes. Source rollback uses devctl; runtime profile/package recovery retains the A16 rules.

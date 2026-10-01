@@ -44,3 +44,7 @@ python3 -B tools/uts_verify.py --allow-network
 ```
 
 Reports are written under ignored `.uts-reports/`; send `latest-summary.txt` and the referenced failing log when a check fails. See `docs/UTS_VERIFICATION.md`.
+
+## 2026-10-01 correction
+
+See [A17b UTS cache recovery](docs/A17_UTS_CACHE_RECOVERY.md).

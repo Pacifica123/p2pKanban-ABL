@@ -218,6 +218,14 @@
         "-B",
         "tools/check_a17.py"
       ]
+    },
+    {
+      "id": "a17b",
+      "command": [
+        "python3",
+        "-B",
+        "tools/check_uts_cache_recovery.py"
+      ]
     }
   ],
   "frontend": {
